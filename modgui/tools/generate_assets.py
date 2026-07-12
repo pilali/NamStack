@@ -1,0 +1,246 @@
+#!/usr/bin/env python3
+"""Generates the NamStack modgui image assets (knob/switch film strips,
+screenshot and thumbnail). The screenshot mirrors the layout defined in
+stylesheet-namstack.css; re-run this script if the CSS layout changes.
+
+Requires Pillow:  pip install pillow
+"""
+
+import math
+import os
+
+from PIL import Image, ImageDraw, ImageFont
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+OUT = os.path.join(HERE, "..", "resources")
+
+# palette
+BG_TOP = (38, 40, 46)
+BG_BOTTOM = (24, 26, 30)
+PANEL_EDGE = (12, 13, 15)
+AMBER = (240, 160, 48)
+AMBER_DIM = (150, 100, 40)
+TEXT = (210, 210, 214)
+TEXT_DIM = (140, 142, 148)
+KNOB_BODY = (52, 54, 60)
+KNOB_RING = (18, 19, 22)
+
+SS = 4  # supersampling factor
+
+
+def font(size, bold=False):
+    names = (
+        ["DejaVuSans-Bold.ttf", "LiberationSans-Bold.ttf"]
+        if bold
+        else ["DejaVuSans.ttf", "LiberationSans-Regular.ttf"]
+    )
+    for name in names:
+        for base in ("/usr/share/fonts/truetype/dejavu", "/usr/share/fonts/truetype/liberation"):
+            path = os.path.join(base, name)
+            if os.path.exists(path):
+                return ImageFont.truetype(path, size)
+    return ImageFont.load_default()
+
+
+def draw_knob_frame(draw, cx, cy, radius, value):
+    """Draw one knob at (cx, cy); value in [0, 1]. Coordinates are in the
+    supersampled space."""
+    r = radius
+    # outer ring
+    draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=KNOB_RING)
+    # body with a simple top-light gradient
+    for i in range(int(r * 0.92), 0, -1):
+        t = i / (r * 0.92)
+        shade = tuple(int(c * (1.15 - 0.35 * t)) for c in KNOB_BODY)
+        draw.ellipse([cx - i, cy - i - (r - i) * 0.08, cx + i, cy + i - (r - i) * 0.08], fill=shade)
+    # value arc
+    start, sweep = 135, 270
+    draw.arc(
+        [cx - r * 0.99, cy - r * 0.99, cx + r * 0.99, cy + r * 0.99],
+        start=start,
+        end=start + sweep * value,
+        fill=AMBER,
+        width=max(2, int(r * 0.10)),
+    )
+    # pointer
+    angle = math.radians(start + sweep * value)
+    x1 = cx + math.cos(angle) * r * 0.25
+    y1 = cy + math.sin(angle) * r * 0.25
+    x2 = cx + math.cos(angle) * r * 0.78
+    y2 = cy + math.sin(angle) * r * 0.78
+    draw.line([x1, y1, x2, y2], fill=AMBER, width=max(2, int(r * 0.10)))
+
+
+def make_knob_strip(frames=49, size=64):
+    img = Image.new("RGBA", (frames * size * SS, size * SS), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    for f in range(frames):
+        value = f / (frames - 1)
+        cx = (f * size + size / 2) * SS
+        cy = (size / 2) * SS
+        draw_knob_frame(draw, cx, cy, (size / 2 - 2) * SS, value)
+    img = img.resize((frames * size, size), Image.LANCZOS)
+    img.save(os.path.join(OUT, "knob.png"))
+
+
+def draw_switch_frame(draw, x0, size, on):
+    """Rocker-style switch in a size x size frame starting at x0
+    (supersampled coordinates)."""
+    s = size * SS
+    pad = int(s * 0.14)
+    box = [x0 + pad, pad + int(s * 0.18), x0 + s - pad, s - pad - int(s * 0.18)]
+    draw.rounded_rectangle(box, radius=int(s * 0.10), fill=KNOB_RING)
+    inner = int(s * 0.045)
+    lever_h = (box[3] - box[1] - 2 * inner) // 2
+    if on:
+        lever = [box[0] + inner, box[1] + inner, box[2] - inner, box[1] + inner + lever_h]
+        color = AMBER
+    else:
+        lever = [box[0] + inner, box[3] - inner - lever_h, box[2] - inner, box[3] - inner]
+        color = (90, 92, 98)
+    draw.rounded_rectangle(lever, radius=int(s * 0.06), fill=color)
+
+
+def draw_footswitch_frame(draw, x0, size, pressed):
+    """Round stomp switch in a size x size frame (supersampled coords)."""
+    s = size * SS
+    cx, cy = x0 + s // 2, s // 2
+    r = int(s * 0.46)
+    draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(60, 62, 68), outline=PANEL_EDGE, width=2 * SS)
+    r2 = int(s * (0.30 if pressed else 0.33))
+    draw.ellipse([cx - r2, cy - r2, cx + r2, cy + r2], fill=(84, 86, 94), outline=(40, 41, 45), width=SS)
+
+
+def make_footswitch_strip(size=64):
+    # frame 0 = active (bypass value 0), frame 1 = bypassed
+    img = Image.new("RGBA", (2 * size * SS, size * SS), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw_footswitch_frame(draw, 0, size, pressed=False)
+    draw_footswitch_frame(draw, size * SS, size, pressed=True)
+    img = img.resize((2 * size, size), Image.LANCZOS)
+    img.save(os.path.join(OUT, "footswitch.png"))
+
+
+def make_switch_strip(size=64):
+    img = Image.new("RGBA", (2 * size * SS, size * SS), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw_switch_frame(draw, 0, size, on=False)
+    draw_switch_frame(draw, size * SS, size, on=True)
+    img = img.resize((2 * size, size), Image.LANCZOS)
+    img.save(os.path.join(OUT, "switch.png"))
+
+
+# ------------------------------------------------------------------ layout
+# Must match stylesheet-namstack.css
+PEDAL_W, PEDAL_H = 840, 360
+ROW_X = 22
+BLOCK_W = 88
+KNOB = 56
+ROW1_TOP, ROW2_TOP = 74, 204  # top of each control block (label line)
+LABEL_H, VALUE_H = 16, 16
+
+ROW1 = ["INPUT", "STACK", "PRE/POST", "BASS", "MIDDLE", "TREBLE", "PARAM 1", "PARAM 2", "OUTPUT"]
+ROW1_SWITCH = {2}
+ROW1_VALUES = {0: "0.0 dB", 3: "0.50", 4: "0.50", 5: "0.50", 6: "0.50", 7: "0.50", 8: "0.0 dB"}
+ROW2 = ["IR 1", "IR 2", "IR 3", "IR 4", "DOUBLER", "MIX", "TIME", "WIDTH"]
+ROW2_SWITCH = {4}
+ROW2_VALUES = {0: "0.0 dB", 1: "0.0 dB", 2: "0.0 dB", 3: "0.0 dB", 5: "0.50", 6: "18 ms", 7: "1.00"}
+
+
+def draw_pedal(scale=1):
+    w, h = PEDAL_W * scale, PEDAL_H * scale
+    img = Image.new("RGBA", (w * SS, h * SS), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
+    # panel with vertical gradient
+    radius = 12 * scale * SS
+    for y in range(h * SS):
+        t = y / (h * SS)
+        color = tuple(int(BG_TOP[i] + (BG_BOTTOM[i] - BG_TOP[i]) * t) for i in range(3))
+        draw.line([(0, y), (w * SS, y)], fill=color)
+    # round the corners + edge
+    mask = Image.new("L", (w * SS, h * SS), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, w * SS - 1, h * SS - 1], radius=radius, fill=255)
+    img.putalpha(mask)
+    draw.rounded_rectangle([0, 0, w * SS - 1, h * SS - 1], radius=radius, outline=PANEL_EDGE, width=2 * SS)
+
+    return img, draw
+
+
+def make_screenshot():
+    img, draw = draw_pedal()
+
+    title_font = font(26 * SS, bold=True)
+    sub_font = font(11 * SS)
+    label_font = font(10 * SS, bold=True)
+    value_font = font(10 * SS)
+
+    draw.text((24 * SS, 12 * SS), "NamStack", font=title_font, fill=AMBER)
+    draw.text((190 * SS, 26 * SS), "NAM · AIDA-X · TONE STACK · IR MIXER · DOUBLER",
+              font=sub_font, fill=TEXT_DIM)
+    draw.text((PEDAL_W * SS - 24 * SS, 26 * SS), "Pilali", font=sub_font, fill=TEXT_DIM, anchor="ra")
+
+    def draw_row(labels, switches, values, top):
+        for i, label in enumerate(labels):
+            bx = ROW_X + i * BLOCK_W
+            cx = (bx + BLOCK_W / 2) * SS
+            draw.text((cx, (top + LABEL_H / 2) * SS), label, font=label_font, fill=TEXT, anchor="mm")
+            ky = top + LABEL_H + 2
+            if i in switches:
+                # draw switch frame (off)
+                sw = Image.new("RGBA", (KNOB * SS, KNOB * SS), (0, 0, 0, 0))
+                draw_switch_frame(ImageDraw.Draw(sw), 0, KNOB, on=False)
+                img.alpha_composite(sw, (int(cx - KNOB / 2 * SS), ky * SS))
+            else:
+                draw_knob_frame(draw, cx, (ky + KNOB / 2) * SS, (KNOB / 2 - 2) * SS, 0.5)
+            if i in values:
+                draw.text((cx, (ky + KNOB + 2 + VALUE_H / 2) * SS), values[i],
+                          font=value_font, fill=TEXT_DIM, anchor="mm")
+
+    draw_row(ROW1, ROW1_SWITCH, ROW1_VALUES, ROW1_TOP)
+    draw_row(ROW2, ROW2_SWITCH, ROW2_VALUES, ROW2_TOP)
+
+    # footswitch + led (matches .ns-footsw in the CSS)
+    fx, fy = 770, 250
+    draw.ellipse([(fx - 24) * SS, (fy - 24) * SS, (fx + 24) * SS, (fy + 24) * SS],
+                 fill=(60, 62, 68), outline=PANEL_EDGE, width=2 * SS)
+    draw.ellipse([(fx - 16) * SS, (fy - 16) * SS, (fx + 16) * SS, (fy + 16) * SS],
+                 fill=(84, 86, 94))
+    draw.ellipse([(fx - 7) * SS, (205 - 7) * SS, (fx + 7) * SS, (205 + 7) * SS],
+                 fill=AMBER, outline=AMBER_DIM, width=SS)
+
+    img = img.resize((PEDAL_W, PEDAL_H), Image.LANCZOS)
+    img.save(os.path.join(OUT, "screenshot-namstack.png"))
+
+
+def make_thumbnail():
+    w, h = 256, 64
+    img = Image.new("RGBA", (w * SS, h * SS), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    for y in range(h * SS):
+        t = y / (h * SS)
+        color = tuple(int(BG_TOP[i] + (BG_BOTTOM[i] - BG_TOP[i]) * t) for i in range(3))
+        draw.line([(0, y), (w * SS, y)], fill=color)
+    mask = Image.new("L", (w * SS, h * SS), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, w * SS - 1, h * SS - 1], radius=8 * SS, fill=255)
+    img.putalpha(mask)
+    draw.rounded_rectangle([0, 0, w * SS - 1, h * SS - 1], radius=8 * SS,
+                           outline=PANEL_EDGE, width=2 * SS)
+
+    draw.text((14 * SS, 18 * SS), "NamStack", font=font(24 * SS, bold=True), fill=AMBER)
+    for i in range(3):
+        cx = (176 + i * 26 + 10) * SS
+        draw_knob_frame(draw, cx, 32 * SS, 10 * SS, 0.3 + 0.2 * i)
+
+    img = img.resize((w, h), Image.LANCZOS)
+    img.save(os.path.join(OUT, "thumbnail-namstack.png"))
+
+
+if __name__ == "__main__":
+    os.makedirs(OUT, exist_ok=True)
+    make_knob_strip()
+    make_switch_strip()
+    make_footswitch_strip()
+    make_screenshot()
+    make_thumbnail()
+    print("assets written to", os.path.abspath(OUT))

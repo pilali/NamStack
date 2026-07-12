@@ -77,3 +77,17 @@ target_link_libraries(NamStack
         juce::juce_dsp
     PUBLIC
         juce::juce_recommended_config_flags)
+
+# ------------------------------------------------------------------- modgui
+# Install the MOD web GUI into the LV2 bundle. JUCE regenerates manifest.ttl
+# on every build (juce_lv2_helper runs as an earlier POST_BUILD step), so the
+# modgui reference is (re-)appended here each time.
+set(MODGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/modgui)
+add_custom_command(TARGET NamStack_LV2 POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${MODGUI_DIR}/resources $<TARGET_FILE_DIR:NamStack_LV2>/modgui
+    COMMAND ${CMAKE_COMMAND} -E copy
+        ${MODGUI_DIR}/modgui.ttl $<TARGET_FILE_DIR:NamStack_LV2>/modgui.ttl
+    COMMAND bash -c "grep -q 'modgui.ttl' '$<TARGET_FILE_DIR:NamStack_LV2>/manifest.ttl' || cat '${MODGUI_DIR}/manifest-modgui.ttl' >> '$<TARGET_FILE_DIR:NamStack_LV2>/manifest.ttl'"
+    COMMENT "Adding modgui to the LV2 bundle"
+    VERBATIM)

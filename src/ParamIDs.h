@@ -7,6 +7,11 @@ namespace ParamIDs
 inline constexpr auto inputGain = "in_gain";
 inline constexpr auto outputGain = "out_gain";
 
+// Conditioning inputs of conditioned AIDA-X models (gain/master style
+// controls baked into the training)
+inline constexpr auto aidaParam1 = "aida_p1";
+inline constexpr auto aidaParam2 = "aida_p2";
+
 inline constexpr auto tsModel = "ts_model";
 inline constexpr auto tsPosition = "ts_position";
 inline constexpr auto tsBass = "ts_bass";

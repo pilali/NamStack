@@ -149,9 +149,13 @@ void NeuralModel::processAtModelRate (float** in, float** out, int numSamples)
         }
         else
         {
-            // Conditioned models: audio on the first input, remaining
-            // conditioning inputs held at zero.
+            // Conditioned models: audio on the first input, then the
+            // Param 1 / Param 2 knobs. Any further inputs stay at zero.
             float inVec[8] = {};
+            inVec[1] = conditioning[0].load (std::memory_order_relaxed);
+            if (rtInputSize >= 3)
+                inVec[2] = conditioning[1].load (std::memory_order_relaxed);
+
             for (int i = 0; i < numSamples; ++i)
             {
                 inVec[0] = input[i];

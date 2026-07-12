@@ -20,9 +20,10 @@ Entrée → Gain d'entrée → [Tone stack si "Pre"] → Modèle neuronal (NAM /
 - Rééchantillonnage automatique (Lanczos) lorsque la fréquence du modèle
   (généralement 48 kHz) diffère de celle de l'hôte ; la latence induite est
   déclarée à l'hôte.
-- Pour les modèles AIDA-X « conditionnés » (entrées de contrôle
-  supplémentaires), seules l'entrée audio est alimentée, les entrées de
-  conditionnement sont maintenues à zéro.
+- Pour les modèles AIDA-X « conditionnés » (une ou deux entrées de contrôle
+  entraînées, type gain/master), les potentiomètres **Param 1** et
+  **Param 2** alimentent les entrées de conditionnement. Ils sont grisés
+  quand le modèle chargé n'est pas conditionné.
 
 ### Tone stack (égalisation d'ampli)
 Simulation du circuit passif Bass/Mid/Treble classique, d'après
@@ -85,6 +86,29 @@ Binaires produits dans `build/NamStack_artefacts/Release/` :
 
 Dépendances Linux : `libasound2-dev libx11-dev libxext-dev libxrandr-dev
 libxinerama-dev libxcursor-dev libfreetype-dev`.
+
+## MOD (modgui)
+
+Le bundle LV2 embarque une interface web **modgui** pour
+[mod-ui](https://github.com/mod-audio/mod-ui) (MOD Audio) :
+
+- `modgui/` : template (`icon-namstack.html`), feuille de style, sprites de
+  potentiomètres/interrupteurs, `screenshot-namstack.png` (840×360) et
+  `thumbnail-namstack.png` (256×64), régénérables avec
+  `python3 modgui/tools/generate_assets.py` (Pillow requis).
+- Les **jacks audio du template sont générés par mod-ui lui-même** : le
+  template itère sur `effect.ports.audio.input` / `effect.ports.audio.output`
+  fournis par mod-ui, si bien que les symboles de ports (`audio_in_1`,
+  `audio_out_1`, `audio_out_2`) correspondent toujours à ceux du `dsp.ttl`
+  généré par JUCE.
+- JUCE 8 expose les paramètres LV2 en propriétés `patch:writable` (et non en
+  ControlPorts) ; les contrôles du modgui utilisent donc
+  `mod-role="input-parameter"` avec l'URI du paramètre
+  (`urn:pilali:NamStack:<id>`), supporté par mod-ui.
+- Limitation : le chargement des fichiers de modèles et d'IR passe par
+  l'état du plugin (éditeur desktop), pas par des paramètres `atom:Path` —
+  sur un appareil MOD, les fichiers ne peuvent pas être choisis depuis le
+  modgui.
 
 ## Notes
 

@@ -1,0 +1,6 @@
+
+# --- appended by the NamStack build: MOD gui ---
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<urn:pilali:NamStack>
+	rdfs:seeAlso <modgui.ttl> .

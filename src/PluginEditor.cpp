@@ -47,6 +47,17 @@ NamStackAudioProcessorEditor::NamStackAudioProcessorEditor (NamStackAudioProcess
     inputGainAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::inputGain, inputGainSlider);
     outputGainAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::outputGain, outputGainSlider);
 
+    setupRotary (aidaParam1Slider);
+    setupRotary (aidaParam2Slider);
+    setupCaption (aidaParam1Label);
+    setupCaption (aidaParam2Label);
+    addAndMakeVisible (aidaParam1Slider);
+    addAndMakeVisible (aidaParam2Slider);
+    addAndMakeVisible (aidaParam1Label);
+    addAndMakeVisible (aidaParam2Label);
+    aidaParam1Attachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::aidaParam1, aidaParam1Slider);
+    aidaParam2Attachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::aidaParam2, aidaParam2Slider);
+
     // ------------------------------------------------------------ tone stack
     addAndMakeVisible (toneGroup);
     addAndMakeVisible (toneStackBox);
@@ -163,6 +174,13 @@ void NamStackAudioProcessorEditor::refreshFileLabels()
         irRows[i].nameLabel.setText (irName.isNotEmpty() ? irName : "<empty>",
                                      juce::dontSendNotification);
     }
+
+    // The conditioning knobs only do something on conditioned AIDA-X models.
+    const auto numConditioning = processor.getNumModelConditioningInputs();
+    aidaParam1Slider.setEnabled (numConditioning >= 1);
+    aidaParam2Slider.setEnabled (numConditioning >= 2);
+    aidaParam1Label.setEnabled (numConditioning >= 1);
+    aidaParam2Label.setEnabled (numConditioning >= 2);
 }
 
 void NamStackAudioProcessorEditor::chooseModelFile()
@@ -224,12 +242,19 @@ void NamStackAudioProcessorEditor::resized()
     ampGroup.setBounds (ampArea);
     auto ampInner = ampArea.reduced (14, 22);
 
-    auto gainArea = ampInner.removeFromRight (220);
-    auto inArea = gainArea.removeFromLeft (110);
-    inputGainLabel.setBounds (inArea.removeFromBottom (16));
-    inputGainSlider.setBounds (inArea);
-    outputGainLabel.setBounds (gainArea.removeFromBottom (16));
-    outputGainSlider.setBounds (gainArea);
+    auto knobsArea = ampInner.removeFromRight (440);
+
+    auto placeAmpKnob = [&knobsArea] (juce::Slider& slider, juce::Label& label)
+    {
+        auto area = knobsArea.removeFromLeft (110);
+        label.setBounds (area.removeFromBottom (16));
+        slider.setBounds (area);
+    };
+
+    placeAmpKnob (aidaParam1Slider, aidaParam1Label);
+    placeAmpKnob (aidaParam2Slider, aidaParam2Label);
+    placeAmpKnob (inputGainSlider, inputGainLabel);
+    placeAmpKnob (outputGainSlider, outputGainLabel);
 
     auto modelButtons = ampInner.removeFromTop (28);
     loadModelButton.setBounds (modelButtons.removeFromLeft (130));

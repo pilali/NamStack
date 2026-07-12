@@ -1,0 +1,12 @@
+@prefix modgui: <http://moddevices.com/ns/modgui#> .
+
+<urn:pilali:NamStack>
+    modgui:gui [
+        modgui:resourcesDirectory <modgui> ;
+        modgui:iconTemplate <modgui/icon-namstack.html> ;
+        modgui:stylesheet <modgui/stylesheet-namstack.css> ;
+        modgui:screenshot <modgui/screenshot-namstack.png> ;
+        modgui:thumbnail <modgui/thumbnail-namstack.png> ;
+        modgui:brand "Pilali" ;
+        modgui:label "NamStack" ;
+    ] .

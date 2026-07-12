@@ -2,6 +2,7 @@
 
 #include <juce_core/juce_core.h>
 
+#include <atomic>
 #include <memory>
 
 namespace nam
@@ -56,6 +57,21 @@ public:
     double getModelSampleRate() const noexcept { return modelSampleRate; }
     int getLatencySamples() const noexcept;
 
+    // Number of extra conditioning inputs of an AIDA-X/RTNeural model
+    // (0 for plain models and for NAM).
+    int getNumConditioningInputs() const noexcept
+    {
+        return type == Type::rtNeural ? rtInputSize - 1 : 0;
+    }
+
+    // Values fed to the conditioning inputs (usually gain/master style
+    // knobs baked into the training, in [0, 1]). Realtime-safe.
+    void setConditioning (float param1, float param2) noexcept
+    {
+        conditioning[0].store (param1);
+        conditioning[1].store (param2);
+    }
+
 private:
     Type type = Type::none;
     juce::String name;
@@ -65,6 +81,7 @@ private:
     std::unique_ptr<nam::DSP> namModel;
     std::unique_ptr<RTNeural::Model<float>> rtModel;
     int rtInputSize = 1;
+    std::atomic<float> conditioning[2] { 0.5f, 0.5f };
 
     std::unique_ptr<dsp::ResamplingContainer<float, 1, 12>> resampler;
     bool needsResampling = false;

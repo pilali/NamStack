@@ -21,6 +21,8 @@ NamStackAudioProcessor::NamStackAudioProcessor()
 {
     pInGain = apvts.getRawParameterValue (ParamIDs::inputGain);
     pOutGain = apvts.getRawParameterValue (ParamIDs::outputGain);
+    pAidaParam1 = apvts.getRawParameterValue (ParamIDs::aidaParam1);
+    pAidaParam2 = apvts.getRawParameterValue (ParamIDs::aidaParam2);
     pTsModel = apvts.getRawParameterValue (ParamIDs::tsModel);
     pTsPosition = apvts.getRawParameterValue (ParamIDs::tsPosition);
     pTsBass = apvts.getRawParameterValue (ParamIDs::tsBass);
@@ -65,6 +67,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout NamStackAudioProcessor::crea
         id (ParamIDs::outputGain), "Output Gain",
         juce::NormalisableRange<float> (-24.0f, 24.0f, 0.1f), 0.0f,
         juce::AudioParameterFloatAttributes().withLabel ("dB")));
+
+    params.push_back (std::make_unique<FloatParam> (id (ParamIDs::aidaParam1), "Model Param 1",
+                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));
+    params.push_back (std::make_unique<FloatParam> (id (ParamIDs::aidaParam2), "Model Param 2",
+                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));
 
     juce::StringArray toneStackNames;
     for (const auto& m : nsdsp::ToneStack::getModels())
@@ -207,7 +214,10 @@ void NamStackAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     {
         const juce::SpinLock::ScopedTryLockType tl (modelLock);
         if (tl.isLocked() && model != nullptr && model->isLoaded())
+        {
+            model->setConditioning (pAidaParam1->load(), pAidaParam2->load());
             model->process (mono, numSamples);
+        }
     }
 
     // ------------------------------------------------- tone stack (post) --
@@ -312,7 +322,17 @@ juce::String NamStackAudioProcessor::getModelInfo() const
 
     juce::String info = model->getType() == nsdsp::NeuralModel::Type::nam ? "NAM" : "AIDA-X / RTNeural";
     info << " @ " << juce::String (model->getModelSampleRate() / 1000.0, 1) << " kHz";
+
+    if (const auto numConditioning = model->getNumConditioningInputs(); numConditioning > 0)
+        info << "  -  " << numConditioning << (numConditioning > 1 ? " conditioning params" : " conditioning param");
+
     return info;
+}
+
+int NamStackAudioProcessor::getNumModelConditioningInputs() const
+{
+    const juce::SpinLock::ScopedLockType sl (const_cast<juce::SpinLock&> (modelLock));
+    return model != nullptr ? model->getNumConditioningInputs() : 0;
 }
 
 void NamStackAudioProcessor::loadIRFile (int slot, const juce::File& file)

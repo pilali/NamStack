@@ -44,6 +44,7 @@ public:
     void clearModel();
     juce::String getModelName() const;
     juce::String getModelInfo() const;
+    int getNumModelConditioningInputs() const;
 
     void loadIRFile (int slot, const juce::File& file);
     void clearIR (int slot);
@@ -79,6 +80,8 @@ private:
     // --------------------------------------------------------- cached params
     std::atomic<float>* pInGain = nullptr;
     std::atomic<float>* pOutGain = nullptr;
+    std::atomic<float>* pAidaParam1 = nullptr;
+    std::atomic<float>* pAidaParam2 = nullptr;
     std::atomic<float>* pTsModel = nullptr;
     std::atomic<float>* pTsPosition = nullptr;
     std::atomic<float>* pTsBass = nullptr;

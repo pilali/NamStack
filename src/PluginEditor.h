@@ -37,6 +37,10 @@ private:
     juce::Label inputGainLabel { {}, "Input" }, outputGainLabel { {}, "Output" };
     std::unique_ptr<SliderAttachment> inputGainAttachment, outputGainAttachment;
 
+    juce::Slider aidaParam1Slider, aidaParam2Slider;
+    juce::Label aidaParam1Label { {}, "Param 1" }, aidaParam2Label { {}, "Param 2" };
+    std::unique_ptr<SliderAttachment> aidaParam1Attachment, aidaParam2Attachment;
+
     // ------------------------------------------------------------ tone stack
     juce::GroupComponent toneGroup { {}, "TONE STACK" };
     juce::ComboBox toneStackBox, tonePositionBox;
