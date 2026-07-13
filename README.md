@@ -153,6 +153,41 @@ l'avertissement `changes meaning of 'LanczosResampler'` qui subsiste sous
 GCC 11–13 (bénin). Sur la toolchain GCC 9 de mod-plugin-builder, rien de tout
 cela ne se déclenche.
 
+### Visibilité des symboles (crash de mod-host)
+
+Un plugin LV2 est chargé par `dlopen()` dans le processus de l'hôte, **aux côtés
+des autres plugins**. Or `neural-amp-modeler-lv2` embarque lui aussi
+NeuralAmpModelerCore. Si les deux `.so` exportent tout le namespace `nam::`,
+l'éditeur de liens dynamique les *interpose* :
+
+- le singleton `nam::ConfigParserRegistry` est émis comme symbole
+  **`STB_GNU_UNIQUE`**, que la glibc unifie entre bibliothèques **même en
+  `RTLD_LOCAL`**. Le second plugin chargé ré-enregistre alors ses parseurs dans
+  un registre déjà rempli, et **fait planter l'hôte** :
+
+  ```
+  terminate called after throwing an instance of 'std::runtime_error'
+    what():  Config parser already registered for: SlimmableContainer
+  mod-host.service: Main process exited, code=dumped, status=6/ABRT
+  ```
+
+- même sans ce crash, `nam::create_dsp` & co. se lieraient à la copie chargée en
+  premier, mélangeant silencieusement **deux versions différentes de NAM core**.
+
+Le `CMakeLists.txt` compile donc tout en visibilité masquée
+(`CMAKE_CXX_VISIBILITY_PRESET hidden`, `-fno-gnu-unique`) et lie le module avec
+`-Wl,--exclude-libs,ALL`. Seul le point d'entrée `lv2_descriptor` reste exporté
+(il porte `LV2_SYMBOL_EXPORT`). Contrôle rapide — la commande ne doit afficher
+qu'une seule ligne :
+
+```bash
+nm -D --defined-only build/mod_artefacts/namstack-mod.lv2/namstack.so
+# 0000000000012650 T lv2_descriptor
+```
+
+C'est une règle générale : **un plugin LV2 ne doit exporter que
+`lv2_descriptor`.**
+
 ### Compilation avec mod-plugin-builder (MOD Dwarf)
 
 ```bash

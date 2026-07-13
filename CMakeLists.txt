@@ -32,6 +32,27 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|aarch64)" AND (CMAKE_CXX_COMPILER_ID ST
     add_compile_options(-fsigned-char)
 endif()
 
+# An LV2 plugin is dlopen'd into a host that may already have loaded another
+# plugin built from the same libraries -- neural-amp-modeler-lv2, for instance,
+# also vendors NeuralAmpModelerCore. With default visibility both .so files
+# export the whole nam:: namespace and the dynamic linker interposes them:
+#   * nam::ConfigParserRegistry's singleton is emitted as an STB_GNU_UNIQUE
+#     symbol, which glibc unifies across DSOs even under RTLD_LOCAL. The second
+#     plugin to load then re-registers its parsers into an already-populated
+#     registry and aborts the host:
+#       "Config parser already registered for: SlimmableContainer"
+#   * even without that, nam::create_dsp and friends would bind to whichever
+#     copy loaded first, silently mixing two NAM core versions.
+# Hide everything by default (the LV2 entry point carries an explicit
+# LV2_SYMBOL_EXPORT) and stop GCC from emitting unique symbols at all. Must be
+# set before the targets below are defined, RTNeural included.
+set(CMAKE_C_VISIBILITY_PRESET hidden)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(-fno-gnu-unique)
+endif()
+
 # ------------------------------------------------------------------ RTNeural
 set(RTNEURAL_EIGEN ON CACHE BOOL "" FORCE)
 add_subdirectory(external/RTNeural)
@@ -165,6 +186,12 @@ if(NAMSTACK_BUILD_MOD_LV2)
         NAMSTACK_MAX_IR_SAMPLES=${NAMSTACK_MAX_IR_SAMPLES})
 
     target_link_libraries(namstack_mod PRIVATE namstack_core pffft)
+
+    # Belt and braces alongside the hidden visibility set above: symbols pulled
+    # in from the static archives must not be re-exported by the module either.
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_link_options(namstack_mod PRIVATE -Wl,--exclude-libs,ALL)
+    endif()
 
     # assemble the LV2 bundle next to the binary
     set(MOD_BUNDLE_DIR ${CMAKE_BINARY_DIR}/mod_artefacts/namstack-mod.lv2)
