@@ -36,6 +36,8 @@ NamStackAudioProcessor::NamStackAudioProcessor()
         pIrPan[i] = apvts.getRawParameterValue (ParamIDs::irPan (i));
     }
 
+    apvts.addParameterListener (ParamIDs::modelQuality, this);
+
     pDblOn = apvts.getRawParameterValue (ParamIDs::dblOn);
     pDblMix = apvts.getRawParameterValue (ParamIDs::dblMix);
     pDblTime = apvts.getRawParameterValue (ParamIDs::dblTime);
@@ -46,7 +48,23 @@ NamStackAudioProcessor::NamStackAudioProcessor()
 
 NamStackAudioProcessor::~NamStackAudioProcessor()
 {
+    apvts.removeParameterListener (ParamIDs::modelQuality, this);
+    qualityApplier.cancelPendingUpdate();
     cancelPendingUpdate();
+}
+
+void NamStackAudioProcessor::parameterChanged (const juce::String&, float)
+{
+    qualityApplier.triggerAsyncUpdate();
+}
+
+void NamStackAudioProcessor::applyModelQuality()
+{
+    // The model pointer is only mutated on the message thread (which we are
+    // on), and setSlimmableSize() is safe to call while the audio thread is
+    // processing, so no lock is needed here.
+    if (model != nullptr && model->isLoaded())
+        model->setSlimmableSize ((double) apvts.getRawParameterValue (ParamIDs::modelQuality)->load());
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout NamStackAudioProcessor::createParameterLayout()
@@ -72,6 +90,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout NamStackAudioProcessor::crea
                                                     juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));
     params.push_back (std::make_unique<FloatParam> (id (ParamIDs::aidaParam2), "Model Param 2",
                                                     juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));
+    params.push_back (std::make_unique<FloatParam> (id (ParamIDs::modelQuality), "Model Quality",
+                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 1.0f));
 
     juce::StringArray toneStackNames;
     for (const auto& m : nsdsp::ToneStack::getModels())
@@ -292,6 +312,7 @@ bool NamStackAudioProcessor::loadModelFile (const juce::File& file, juce::String
     newModel.reset(); // destroy the previous model outside the lock
 
     apvts.state.setProperty (modelPathProperty, file.getFullPathName(), nullptr);
+    applyModelQuality();
     updateLatency();
     fileStateChanged.sendChangeMessage();
     return true;

@@ -20,6 +20,11 @@ option(NAMSTACK_BUILD_MOD_LV2 "Build the plain LV2 plugin for MOD devices" ON)
 # embedded targets. 8192 samples = 170 ms at 48 kHz.
 set(NAMSTACK_MAX_IR_SAMPLES 8192 CACHE STRING "Maximum IR length in samples (MOD variant)")
 
+# Specialized fast path for A2-architecture NAM models (A2 standard and A2
+# nano — WaveNet-shaped files detected by is_a2_shape()). Without it A2
+# models still load, but through the slower generic WaveNet implementation.
+option(NAMSTACK_ENABLE_A2_FAST "Enable the NAM A2 fast-path WaveNet implementation" ON)
+
 # ------------------------------------------------------------------ RTNeural
 set(RTNEURAL_EIGEN ON CACHE BOOL "" FORCE)
 add_subdirectory(external/RTNeural)
@@ -45,6 +50,10 @@ target_include_directories(nam_core PUBLIC
 target_compile_definitions(nam_core PUBLIC
     NAM_SAMPLE_FLOAT
     DSP_SAMPLE_FLOAT)
+
+if(NAMSTACK_ENABLE_A2_FAST)
+    target_compile_definitions(nam_core PUBLIC NAM_ENABLE_A2_FAST)
+endif()
 
 # ------------------------------------------------------------ shared DSP core
 # JUCE-free DSP shared by the JUCE plugin and the MOD LV2 plugin.

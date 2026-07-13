@@ -58,6 +58,12 @@ NamStackAudioProcessorEditor::NamStackAudioProcessorEditor (NamStackAudioProcess
     aidaParam1Attachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::aidaParam1, aidaParam1Slider);
     aidaParam2Attachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::aidaParam2, aidaParam2Slider);
 
+    setupRotary (qualitySlider);
+    setupCaption (qualityLabel);
+    addAndMakeVisible (qualitySlider);
+    addAndMakeVisible (qualityLabel);
+    qualityAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::modelQuality, qualitySlider);
+
     // ------------------------------------------------------------ tone stack
     addAndMakeVisible (toneGroup);
     addAndMakeVisible (toneStackBox);
@@ -242,17 +248,18 @@ void NamStackAudioProcessorEditor::resized()
     ampGroup.setBounds (ampArea);
     auto ampInner = ampArea.reduced (14, 22);
 
-    auto knobsArea = ampInner.removeFromRight (440);
+    auto knobsArea = ampInner.removeFromRight (525);
 
     auto placeAmpKnob = [&knobsArea] (juce::Slider& slider, juce::Label& label)
     {
-        auto area = knobsArea.removeFromLeft (110);
+        auto area = knobsArea.removeFromLeft (105);
         label.setBounds (area.removeFromBottom (16));
         slider.setBounds (area);
     };
 
     placeAmpKnob (aidaParam1Slider, aidaParam1Label);
     placeAmpKnob (aidaParam2Slider, aidaParam2Label);
+    placeAmpKnob (qualitySlider, qualityLabel);
     placeAmpKnob (inputGainSlider, inputGainLabel);
     placeAmpKnob (outputGainSlider, outputGainLabel);
 

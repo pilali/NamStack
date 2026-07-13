@@ -15,7 +15,13 @@ Entrée → Gain d'entrée → [Tone stack si "Pre"] → Modèle neuronal (NAM /
 
 ### Modèles neuronaux
 - **NAM** (`.nam`) via [NeuralAmpModelerCore](https://github.com/sdatkinson/NeuralAmpModelerCore)
-  (WaveNet, LSTM, ConvNet…)
+  (WaveNet, LSTM, ConvNet, **A2** standard/nano et conteneurs slimmables)
+- Architecture **A2** : la voie rapide spécialisée est activée
+  (`NAM_ENABLE_A2_FAST`, désactivable avec
+  `-DNAMSTACK_ENABLE_A2_FAST=OFF`) ; les fichiers A2 « SlimmableContainer »
+  exposent en plus un potentiomètre **Quality** (0–1) qui échange de la
+  qualité contre du CPU — appliqué hors du thread audio (worker LV2 côté
+  MOD, thread de message côté JUCE). Sans effet sur les autres modèles.
 - **AIDA-X / RTNeural** (`.aidax`, `.json`) via [RTNeural](https://github.com/jatinchowdhury18/RTNeural)
 - Rééchantillonnage automatique (Lanczos) lorsque la fréquence du modèle
   (généralement 48 kHz) diffère de celle de l'hôte ; la latence induite est

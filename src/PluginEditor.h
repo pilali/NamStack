@@ -41,6 +41,10 @@ private:
     juce::Label aidaParam1Label { {}, "Param 1" }, aidaParam2Label { {}, "Param 2" };
     std::unique_ptr<SliderAttachment> aidaParam1Attachment, aidaParam2Attachment;
 
+    juce::Slider qualitySlider;
+    juce::Label qualityLabel { {}, "Quality" };
+    std::unique_ptr<SliderAttachment> qualityAttachment;
+
     // ------------------------------------------------------------ tone stack
     juce::GroupComponent toneGroup { {}, "TONE STACK" };
     juce::ComboBox toneStackBox, tonePositionBox;

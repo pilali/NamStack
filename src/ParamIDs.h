@@ -12,6 +12,9 @@ inline constexpr auto outputGain = "out_gain";
 inline constexpr auto aidaParam1 = "aida_p1";
 inline constexpr auto aidaParam2 = "aida_p2";
 
+// Quality vs CPU trade-off of slimmable NAM models (A2)
+inline constexpr auto modelQuality = "model_quality";
+
 inline constexpr auto tsModel = "ts_model";
 inline constexpr auto tsPosition = "ts_position";
 inline constexpr auto tsBass = "ts_bass";

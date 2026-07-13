@@ -77,6 +77,12 @@ public:
         conditioning[1].store (param2);
     }
 
+    // Slimmable NAM models (e.g. A2 SlimmableContainer files) can trade
+    // quality for CPU. setSlimmableSize() is thread-safe but NOT
+    // realtime-safe: call it from a worker/background thread only.
+    bool isSlimmable() const noexcept;
+    void setSlimmableSize (double size01);
+
 private:
     Type type = Type::none;
     std::string name;

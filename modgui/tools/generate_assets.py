@@ -146,6 +146,10 @@ ROW2 = ["IR 1", "IR 2", "IR 3", "IR 4", "DOUBLER", "MIX", "TIME", "WIDTH"]
 ROW2_SWITCH = {4}
 ROW2_VALUES = {0: "0.0 dB", 1: "0.0 dB", 2: "0.0 dB", 3: "0.0 dB", 5: "0.50", 6: "18 ms", 7: "1.00"}
 
+# The MOD variant adds the slimmable-model quality knob on the second row.
+ROW2_MOD = ROW2 + ["QUALITY"]
+ROW2_MOD_VALUES = {**ROW2_VALUES, 8: "1.00"}
+
 
 def draw_pedal(scale=1):
     w, h = PEDAL_W * scale, PEDAL_H * scale
@@ -249,7 +253,7 @@ def make_screenshot_mod():
 
     # rows sit slightly higher than on the desktop screenshot (CSS: 60 / 182)
     draw_row(ROW1, ROW1_SWITCH, ROW1_VALUES, 60)
-    draw_row(ROW2, ROW2_SWITCH, ROW2_VALUES, 182)
+    draw_row(ROW2_MOD, ROW2_SWITCH, ROW2_MOD_VALUES, 182)
 
     # file selector bar (CSS .ns-files: left 22, top 306, 140px pitch, 132x22 boxes)
     file_labels = ["NEURAL MODEL", "IR 1", "IR 2", "IR 3", "IR 4"]

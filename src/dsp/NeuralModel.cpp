@@ -2,6 +2,7 @@
 
 #include <NAM/dsp.h>
 #include <NAM/get_dsp.h>
+#include <NAM/slimmable.h>
 #include <RTNeural/RTNeural.h>
 
 // AudioDSPTools' ResamplingContainer comes from iPlug2 and expects these two
@@ -152,6 +153,17 @@ void NeuralModel::prepare (double sampleRate, int maxBlockSize)
 int NeuralModel::getLatencySamples() const noexcept
 {
     return resampler != nullptr ? resampler->GetLatency() : 0;
+}
+
+bool NeuralModel::isSlimmable() const noexcept
+{
+    return dynamic_cast<const nam::SlimmableModel*> (namModel.get()) != nullptr;
+}
+
+void NeuralModel::setSlimmableSize (double size01)
+{
+    if (auto* slimmable = dynamic_cast<nam::SlimmableModel*> (namModel.get()))
+        slimmable->SetSlimmableSize (std::clamp (size01, 0.0, 1.0));
 }
 
 void NeuralModel::processAtModelRate (float** in, float** out, int numSamples)

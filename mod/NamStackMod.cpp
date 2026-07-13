@@ -89,6 +89,7 @@ enum PortIndex
     kPortDblHumanize,
     kPortDblWidth,
     kPortOutGain,
+    kPortQuality,
     kPortCount
 };
 
@@ -96,7 +97,8 @@ enum WorkType : uint32_t
 {
     kWorkLoad,
     kWorkApply,
-    kWorkFree
+    kWorkFree,
+    kWorkSetQuality
 };
 
 struct LoadMsg
@@ -119,6 +121,17 @@ struct FreeMsg
     WorkType type;
     int32_t slot;
     void* object;
+};
+
+// SetSlimmableSize() is thread-safe but not realtime-safe, so quality
+// changes run on the worker. The worker executes jobs in order, so a
+// quality job scheduled while `model` is current always runs before the
+// kWorkFree job that would delete that model after a later swap.
+struct QualityMsg
+{
+    WorkType type;
+    nsdsp::NeuralModel* model;
+    float value;
 };
 
 struct NamStackMod
@@ -173,6 +186,9 @@ struct NamStackMod
     float inGainSmoothed = 1.0f;
     float outGainSmoothed = 1.0f;
     float gainCoeff = 0.01f;
+
+    float appliedQuality = 1.0f;
+    bool qualityDirty = false; // set when a new model is swapped in
 
     bool activated = false;
 };
@@ -295,6 +311,14 @@ LV2_Worker_Status work (LV2_Handle instance, LV2_Worker_Respond_Function respond
             return LV2_WORKER_SUCCESS;
         }
 
+        case kWorkSetQuality:
+        {
+            const auto* msg = static_cast<const QualityMsg*> (data);
+            if (msg->model != nullptr)
+                msg->model->setSlimmableSize ((double) msg->value);
+            return LV2_WORKER_SUCCESS;
+        }
+
         case kWorkApply:
             break; // must not arrive here
     }
@@ -319,6 +343,7 @@ LV2_Worker_Status workResponse (LV2_Handle instance, uint32_t size, const void* 
     {
         freeMsg.object = self->model;
         self->model = static_cast<nsdsp::NeuralModel*> (msg->object);
+        self->qualityDirty = true; // re-apply the quality knob to the new model
     }
     else
     {
@@ -620,6 +645,19 @@ void run (LV2_Handle instance, uint32_t nSamples)
     if (self->model != nullptr)
         self->model->setConditioning (param (self, kPortAidaParam1, 0.5f),
                                       param (self, kPortAidaParam2, 0.5f));
+
+    // Quality (slimmable A2 models): applied on the worker thread.
+    const auto quality = param (self, kPortQuality, 1.0f);
+    if (self->model != nullptr
+        && (self->qualityDirty || std::abs (quality - self->appliedQuality) > 1e-4f))
+    {
+        QualityMsg msg = { kWorkSetQuality, self->model, quality };
+        if (self->schedule->schedule_work (self->schedule->handle, sizeof (msg), &msg) == LV2_WORKER_SUCCESS)
+        {
+            self->appliedQuality = quality;
+            self->qualityDirty = false;
+        }
+    }
 
     const float inGainTarget = std::pow (10.0f, param (self, kPortInGain) * 0.05f);
     const float outGainTarget = std::pow (10.0f, param (self, kPortOutGain) * 0.05f);

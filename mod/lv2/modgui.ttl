@@ -74,5 +74,9 @@
             lv2:index 15 ;
             lv2:symbol "out_gain" ;
             lv2:name "Output Gain" ;
+        ] , [
+            lv2:index 16 ;
+            lv2:symbol "quality" ;
+            lv2:name "Model Quality" ;
         ] ;
     ] .

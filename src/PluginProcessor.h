@@ -9,7 +9,8 @@
 #include "dsp/ToneStack.h"
 
 class NamStackAudioProcessor : public juce::AudioProcessor,
-                               private juce::AsyncUpdater
+                               private juce::AsyncUpdater,
+                               private juce::AudioProcessorValueTreeState::Listener
 {
 public:
     NamStackAudioProcessor();
@@ -59,7 +60,20 @@ public:
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     void handleAsyncUpdate() override; // restores model / IR files after setStateInformation
+    void parameterChanged (const juce::String& parameterID, float newValue) override;
     void updateLatency();
+    void applyModelQuality(); // message thread only
+
+    // setSlimmableSize() is not realtime-safe: bounce quality changes to the
+    // message thread (parameterChanged may fire from the audio thread).
+    struct QualityApplier : juce::AsyncUpdater
+    {
+        explicit QualityApplier (NamStackAudioProcessor& p) : processor (p) {}
+        void handleAsyncUpdate() override { processor.applyModelQuality(); }
+        NamStackAudioProcessor& processor;
+    };
+
+    QualityApplier qualityApplier { *this };
 
     // ------------------------------------------------------------------ DSP
     nsdsp::ToneStack toneStack;
