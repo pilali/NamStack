@@ -10,105 +10,108 @@
         modgui:thumbnail <modgui/thumbnail-namstack.png> ;
         modgui:brand "Pilali" ;
         modgui:label "NamStack" ;
+        # Display order = signal-flow reading order: model quality, gain
+        # staging, tone stack, graphic EQ, IR levels, doubler. The lv2:index
+        # here is only the modgui list position, not the plugin port index.
         modgui:port [
             lv2:index 0 ;
-            lv2:symbol "in_gain" ;
-            lv2:name "Input Gain" ;
-        ] , [
-            lv2:index 1 ;
-            lv2:symbol "ts_model" ;
-            lv2:name "Tone Stack" ;
-        ] , [
-            lv2:index 2 ;
-            lv2:symbol "ts_position" ;
-            lv2:name "Tone Stack Position" ;
-        ] , [
-            lv2:index 3 ;
-            lv2:symbol "ts_bass" ;
-            lv2:name "Bass" ;
-        ] , [
-            lv2:index 4 ;
-            lv2:symbol "ts_mid" ;
-            lv2:name "Middle" ;
-        ] , [
-            lv2:index 5 ;
-            lv2:symbol "ts_treble" ;
-            lv2:name "Treble" ;
-        ] , [
-            lv2:index 6 ;
-            lv2:symbol "aida_p1" ;
-            lv2:name "Model Param 1" ;
-        ] , [
-            lv2:index 7 ;
-            lv2:symbol "aida_p2" ;
-            lv2:name "Model Param 2" ;
-        ] , [
-            lv2:index 8 ;
-            lv2:symbol "ir1_gain" ;
-            lv2:name "IR 1 Level" ;
-        ] , [
-            lv2:index 9 ;
-            lv2:symbol "ir2_gain" ;
-            lv2:name "IR 2 Level" ;
-        ] , [
-            lv2:index 10 ;
-            lv2:symbol "ir3_gain" ;
-            lv2:name "IR 3 Level" ;
-        ] , [
-            lv2:index 11 ;
-            lv2:symbol "ir4_gain" ;
-            lv2:name "IR 4 Level" ;
-        ] , [
-            lv2:index 12 ;
-            lv2:symbol "dbl_on" ;
-            lv2:name "Doubler On" ;
-        ] , [
-            lv2:index 13 ;
-            lv2:symbol "dbl_mix" ;
-            lv2:name "Doubler Mix" ;
-        ] , [
-            lv2:index 14 ;
-            lv2:symbol "dbl_width" ;
-            lv2:name "Doubler Width" ;
-        ] , [
-            lv2:index 15 ;
-            lv2:symbol "out_gain" ;
-            lv2:name "Output Gain" ;
-        ] , [
-            lv2:index 16 ;
             lv2:symbol "quality" ;
             lv2:name "Model Quality" ;
         ] , [
-            lv2:index 17 ;
+            lv2:index 1 ;
+            lv2:symbol "in_gain" ;
+            lv2:name "Input Gain" ;
+        ] , [
+            lv2:index 2 ;
+            lv2:symbol "aida_p1" ;
+            lv2:name "Model Param 1" ;
+        ] , [
+            lv2:index 3 ;
+            lv2:symbol "aida_p2" ;
+            lv2:name "Model Param 2" ;
+        ] , [
+            lv2:index 4 ;
+            lv2:symbol "out_gain" ;
+            lv2:name "Output Gain" ;
+        ] , [
+            lv2:index 5 ;
+            lv2:symbol "ts_model" ;
+            lv2:name "Tone Stack" ;
+        ] , [
+            lv2:index 6 ;
             lv2:symbol "ts_on" ;
             lv2:name "Tone Stack On" ;
         ] , [
-            lv2:index 18 ;
+            lv2:index 7 ;
+            lv2:symbol "ts_position" ;
+            lv2:name "Tone Stack Position" ;
+        ] , [
+            lv2:index 8 ;
+            lv2:symbol "ts_bass" ;
+            lv2:name "Bass" ;
+        ] , [
+            lv2:index 9 ;
+            lv2:symbol "ts_mid" ;
+            lv2:name "Middle" ;
+        ] , [
+            lv2:index 10 ;
+            lv2:symbol "ts_treble" ;
+            lv2:name "Treble" ;
+        ] , [
+            lv2:index 11 ;
             lv2:symbol "geq_on" ;
             lv2:name "Graphic EQ On" ;
         ] , [
-            lv2:index 19 ;
+            lv2:index 12 ;
             lv2:symbol "geq_position" ;
             lv2:name "Graphic EQ Position" ;
         ] , [
-            lv2:index 20 ;
+            lv2:index 13 ;
             lv2:symbol "geq_80" ;
             lv2:name "EQ 80 Hz" ;
         ] , [
-            lv2:index 21 ;
+            lv2:index 14 ;
             lv2:symbol "geq_240" ;
             lv2:name "EQ 240 Hz" ;
         ] , [
-            lv2:index 22 ;
+            lv2:index 15 ;
             lv2:symbol "geq_750" ;
             lv2:name "EQ 750 Hz" ;
         ] , [
-            lv2:index 23 ;
+            lv2:index 16 ;
             lv2:symbol "geq_2200" ;
             lv2:name "EQ 2200 Hz" ;
         ] , [
-            lv2:index 24 ;
+            lv2:index 17 ;
             lv2:symbol "geq_6600" ;
             lv2:name "EQ 6600 Hz" ;
+        ] , [
+            lv2:index 18 ;
+            lv2:symbol "ir1_gain" ;
+            lv2:name "IR 1 Level" ;
+        ] , [
+            lv2:index 19 ;
+            lv2:symbol "ir2_gain" ;
+            lv2:name "IR 2 Level" ;
+        ] , [
+            lv2:index 20 ;
+            lv2:symbol "ir3_gain" ;
+            lv2:name "IR 3 Level" ;
+        ] , [
+            lv2:index 21 ;
+            lv2:symbol "ir4_gain" ;
+            lv2:name "IR 4 Level" ;
+        ] , [
+            lv2:index 22 ;
+            lv2:symbol "dbl_on" ;
+            lv2:name "Doubler On" ;
+        ] , [
+            lv2:index 23 ;
+            lv2:symbol "dbl_mix" ;
+            lv2:name "Doubler Mix" ;
+        ] , [
+            lv2:index 24 ;
+            lv2:symbol "dbl_width" ;
+            lv2:name "Doubler Width" ;
         ] ;
     ] .

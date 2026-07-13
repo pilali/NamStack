@@ -1,10 +1,17 @@
 /* NamStack (MOD variant) modgui — layout mirrored by
-   modgui/tools/generate_assets.py (make_screenshot_mod) */
+   modgui/tools/generate_assets.py (make_screenshot_mod)
+
+   Signal-flow reading order, top to bottom:
+     1. neural model (file selector) + A2 quality, input, params, output
+     2. tone stack
+     3. 5-band graphic EQ
+     4. IR mixer (file selector above each level knob)
+     5. doubler */
 
 .namstackmod{{{cns}}} {
     position: absolute;
     width: 960px;
-    height: 520px;
+    height: 656px;
     background: linear-gradient(#26282e, #181a1e);
     border: 2px solid #0c0d0f;
     border-radius: 12px;
@@ -58,13 +65,22 @@
     display: -webkit-box; display: -moz-box; display: flex;
 }
 
-.namstackmod{{{cns}}} .ns-row-amp { top: 60px; }
-.namstackmod{{{cns}}} .ns-row-fx  { top: 182px; }
-.namstackmod{{{cns}}} .ns-row-eq  { top: 300px; }
+/* Row 1 starts after the model file selector (left: 22, width 240). */
+.namstackmod{{{cns}}} .ns-row-model { top: 60px; left: 290px; }
+.namstackmod{{{cns}}} .ns-row-ts    { top: 164px; }
+.namstackmod{{{cns}}} .ns-row-eq    { top: 256px; }
+.namstackmod{{{cns}}} .ns-row-ir    { top: 442px; }
+.namstackmod{{{cns}}} .ns-row-dbl   { top: 548px; }
 
 .namstackmod{{{cns}}} .ns-ctrl {
     width: 88px;
     text-align: center;
+}
+
+/* IR level cells share the 148px pitch of the file selectors above them, so
+   each knob lines up under its slot. */
+.namstackmod{{{cns}}} .ns-ctrl-ir {
+    width: 148px;
 }
 
 /* one 5-band graphic-EQ slider cell */
@@ -73,7 +89,8 @@
     text-align: center;
 }
 
-.namstackmod{{{cns}}} .ns-ctrl p {
+.namstackmod{{{cns}}} .ns-ctrl p,
+.namstackmod{{{cns}}} .ns-ctrl-fader p {
     margin: 0;
     height: 16px;
     line-height: 16px;
@@ -139,18 +156,31 @@
 }
 
 /* ------------------------------------------------------- file selectors */
-.namstackmod{{{cns}}} .ns-files {
+/* The ns-files wrapper stays static and sizeless (it must not cover the other
+   controls); each entry is placed from its mod-parameter-uri attribute, so the
+   layout does not depend on the order mod-ui iterates effect.parameters. */
+.namstackmod{{{cns}}} .ns-file {
     position: absolute;
-    left: 22px;
-    top: 448px;
-    width: 700px;
-    display: -webkit-box; display: -moz-box; display: flex;
+    width: 140px;
 }
 
-.namstackmod{{{cns}}} .ns-file {
-    width: 140px;
-    margin-right: 8px;
+/* the neural model, top row, wide enough for real model file names */
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#model"] {
+    left: 22px;
+    top: 84px;
+    width: 240px;
 }
+
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#model"] .ns-file-select,
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#model"] .ns-file-list {
+    width: 232px;
+}
+
+/* one selector above each IR level knob (148px pitch, see .ns-ctrl-ir) */
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir1"] { left: 22px;  top: 400px; }
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir2"] { left: 170px; top: 400px; }
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir3"] { left: 318px; top: 400px; }
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir4"] { left: 466px; top: 400px; }
 
 .namstackmod{{{cns}}} .ns-file p {
     margin: 0 0 2px;
@@ -219,7 +249,7 @@
 .namstackmod{{{cns}}} .ns-footswitch {
     position: absolute;
     left: 880px;
-    top: 452px;
+    top: 580px;
     width: 48px;
     height: 48px;
     background-image: url(/resources/footswitch.png{{{ns}}});
@@ -230,7 +260,7 @@
 .namstackmod{{{cns}}} .ns-led {
     position: absolute;
     left: 897px;
-    top: 428px;
+    top: 556px;
     width: 14px;
     height: 14px;
     border-radius: 50%;
