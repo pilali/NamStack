@@ -131,18 +131,75 @@ def make_switch_strip(size=64):
     img.save(os.path.join(OUT, "switch.png"))
 
 
+# ------------------------------------------------------------------ fader
+# Vertical slider for the 5-band graphic EQ. mod-ui has no slider widget -- the
+# only thing it can render is a film strip -- so the travel is drawn frame by
+# frame, the cap climbing from bottom (frame 0) to top (last frame).
+FADER_W = 40
+FADER_H = 96
+FADER_FRAMES = 33  # -> 32 steps, an even number so the centre frame is 0 dB
+
+
+def draw_fader_frame(draw, x0, value):
+    """One fader frame, `value` in [0, 1] from bottom to top (supersampled)."""
+    w, h = FADER_W * SS, FADER_H * SS
+
+    # slot
+    slot_w = int(w * 0.14)
+    slot_x = x0 + (w - slot_w) // 2
+    margin = int(h * 0.10)
+    draw.rounded_rectangle(
+        [slot_x, margin, slot_x + slot_w, h - margin],
+        radius=slot_w // 2,
+        fill=KNOB_RING,
+    )
+
+    # centre detent (0 dB)
+    mid_y = h // 2
+    draw.line([x0 + int(w * 0.18), mid_y, x0 + w - int(w * 0.18), mid_y],
+              fill=(70, 72, 78), width=SS)
+
+    # cap: travels between the slot ends
+    cap_w, cap_h = int(w * 0.62), int(h * 0.11)
+    travel_top = margin + cap_h // 2
+    travel_bottom = h - margin - cap_h // 2
+    cy = int(travel_bottom - value * (travel_bottom - travel_top))
+    cx = x0 + w // 2
+    draw.rounded_rectangle(
+        [cx - cap_w // 2, cy - cap_h // 2, cx + cap_w // 2, cy + cap_h // 2],
+        radius=int(cap_h * 0.3),
+        fill=KNOB_BODY,
+        outline=KNOB_RING,
+        width=SS,
+    )
+    # amber indicator line across the cap
+    draw.line([cx - cap_w // 2 + SS, cy, cx + cap_w // 2 - SS, cy], fill=AMBER, width=SS)
+
+
+def make_fader_strip():
+    img = Image.new("RGBA", (FADER_FRAMES * FADER_W * SS, FADER_H * SS), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    for i in range(FADER_FRAMES):
+        draw_fader_frame(draw, i * FADER_W * SS, i / (FADER_FRAMES - 1))
+    img = img.resize((FADER_FRAMES * FADER_W, FADER_H), Image.LANCZOS)
+    img.save(os.path.join(OUT, "fader.png"))
+
+
 # ------------------------------------------------------------------ layout
 # Must match stylesheet-namstack.css
-PEDAL_W, PEDAL_H = 840, 360
+PEDAL_W, PEDAL_H = 960, 480
 ROW_X = 22
 BLOCK_W = 88
 KNOB = 56
 ROW1_TOP, ROW2_TOP = 74, 204  # top of each control block (label line)
+EQ_ROW_TOP = 322
 LABEL_H, VALUE_H = 16, 16
 
-ROW1 = ["INPUT", "STACK", "PRE/POST", "BASS", "MIDDLE", "TREBLE", "PARAM 1", "PARAM 2", "OUTPUT"]
-ROW1_SWITCH = {2}
-ROW1_VALUES = {0: "0.0 dB", 3: "0.50", 4: "0.50", 5: "0.50", 6: "0.50", 7: "0.50", 8: "0.0 dB"}
+ROW1 = ["INPUT", "STACK", "STACK ON", "PRE/POST", "BASS", "MIDDLE", "TREBLE",
+        "PARAM 1", "PARAM 2", "OUTPUT"]
+ROW1_SWITCH = {2, 3}
+ROW1_VALUES = {0: "0.0 dB", 4: "0.50", 5: "0.50", 6: "0.50", 7: "0.50", 8: "0.50",
+               9: "0.0 dB"}
 ROW2 = ["IR 1", "IR 2", "IR 3", "IR 4", "DOUBLER", "MIX", "TIME", "WIDTH"]
 ROW2_SWITCH = {4}
 ROW2_VALUES = {0: "0.0 dB", 1: "0.0 dB", 2: "0.0 dB", 3: "0.0 dB", 5: "0.50", 6: "18 ms", 7: "1.00"}
@@ -150,6 +207,37 @@ ROW2_VALUES = {0: "0.0 dB", 1: "0.0 dB", 2: "0.0 dB", 3: "0.0 dB", 5: "0.50", 6:
 # The MOD variant adds the slimmable-model quality knob on the second row.
 ROW2_MOD = ROW2 + ["QUALITY"]
 ROW2_MOD_VALUES = {**ROW2_VALUES, 8: "1.00"}
+
+# 5-band graphic EQ row: two switches then the five faders (CSS .ns-ctrl-fader).
+EQ_SWITCHES = ["EQ ON", "EQ PRE/POST"]
+EQ_BANDS = ["80", "240", "750", "2200", "6600"]
+FADER_BLOCK_W = 72
+
+
+def draw_eq_row(img, draw, top, label_font, value_font):
+    """The graphic-EQ row: two switches, then five faders sitting at 0 dB."""
+    for i, label in enumerate(EQ_SWITCHES):
+        bx = ROW_X + i * BLOCK_W
+        cx = (bx + BLOCK_W / 2) * SS
+        draw.text((cx, (top + LABEL_H / 2) * SS), label, font=label_font, fill=TEXT, anchor="mm")
+        ky = top + LABEL_H + 2
+        sw = Image.new("RGBA", (KNOB * SS, KNOB * SS), (0, 0, 0, 0))
+        draw_switch_frame(ImageDraw.Draw(sw), 0, KNOB, on=False)
+        img.alpha_composite(sw, (int(cx - KNOB / 2 * SS), ky * SS))
+
+    fader_x0 = ROW_X + len(EQ_SWITCHES) * BLOCK_W
+    for i, label in enumerate(EQ_BANDS):
+        bx = fader_x0 + i * FADER_BLOCK_W
+        cx = (bx + FADER_BLOCK_W / 2) * SS
+        draw.text((cx, (top + LABEL_H / 2) * SS), label, font=label_font, fill=TEXT, anchor="mm")
+
+        ky = top + LABEL_H + 2
+        fd = Image.new("RGBA", (FADER_W * SS, FADER_H * SS), (0, 0, 0, 0))
+        draw_fader_frame(ImageDraw.Draw(fd), 0, 0.5)  # centre = 0 dB
+        img.alpha_composite(fd, (int(cx - FADER_W / 2 * SS), ky * SS))
+
+        draw.text((cx, (ky + FADER_H + 2 + VALUE_H / 2) * SS), "0.0 dB",
+                  font=value_font, fill=TEXT_DIM, anchor="mm")
 
 
 def draw_pedal(scale=1):
@@ -181,7 +269,7 @@ def make_screenshot():
     value_font = font(10 * SS)
 
     draw.text((24 * SS, 12 * SS), "NamStack", font=title_font, fill=AMBER)
-    draw.text((190 * SS, 26 * SS), "NAM · AIDA-X · TONE STACK · IR MIXER · DOUBLER",
+    draw.text((190 * SS, 26 * SS), "NAM · AIDA-X · TONE STACK · 5-BAND EQ · IR MIXER · DOUBLER",
               font=sub_font, fill=TEXT_DIM)
     draw.text((PEDAL_W * SS - 24 * SS, 26 * SS), "Pilali", font=sub_font, fill=TEXT_DIM, anchor="ra")
 
@@ -204,14 +292,15 @@ def make_screenshot():
 
     draw_row(ROW1, ROW1_SWITCH, ROW1_VALUES, ROW1_TOP)
     draw_row(ROW2, ROW2_SWITCH, ROW2_VALUES, ROW2_TOP)
+    draw_eq_row(img, draw, EQ_ROW_TOP, label_font, value_font)
 
-    # footswitch + led (matches .ns-footsw in the CSS)
-    fx, fy = 770, 250
+    # footswitch + led (CSS: fsw 880/396 48px, led 897/372 14px)
+    fx, fy = 904, 420
     draw.ellipse([(fx - 24) * SS, (fy - 24) * SS, (fx + 24) * SS, (fy + 24) * SS],
                  fill=(60, 62, 68), outline=PANEL_EDGE, width=2 * SS)
     draw.ellipse([(fx - 16) * SS, (fy - 16) * SS, (fx + 16) * SS, (fy + 16) * SS],
                  fill=(84, 86, 94))
-    draw.ellipse([(fx - 7) * SS, (205 - 7) * SS, (fx + 7) * SS, (205 + 7) * SS],
+    draw.ellipse([(fx - 7) * SS, (379 - 7) * SS, (fx + 7) * SS, (379 + 7) * SS],
                  fill=AMBER, outline=AMBER_DIM, width=SS)
 
     img = img.resize((PEDAL_W, PEDAL_H), Image.LANCZOS)
@@ -223,7 +312,7 @@ def make_screenshot_mod():
     bottom row of file selectors. Mirrors mod/modgui/stylesheet-namstack-mod.css."""
     global PEDAL_H
     saved_h = PEDAL_H
-    PEDAL_H = 400
+    PEDAL_H = 520
     img, draw = draw_pedal()
 
     title_font = font(26 * SS, bold=True)
@@ -232,7 +321,7 @@ def make_screenshot_mod():
     value_font = font(10 * SS)
 
     draw.text((24 * SS, 12 * SS), "NamStack", font=title_font, fill=AMBER)
-    draw.text((190 * SS, 26 * SS), "NAM · AIDA-X · TONE STACK · IR MIXER · DOUBLER",
+    draw.text((190 * SS, 26 * SS), "NAM · AIDA-X · TONE STACK · 5-BAND EQ · IR MIXER · DOUBLER",
               font=sub_font, fill=TEXT_DIM)
     draw.text((PEDAL_W * SS - 24 * SS, 26 * SS), "Pilali", font=sub_font, fill=TEXT_DIM, anchor="ra")
 
@@ -256,23 +345,26 @@ def make_screenshot_mod():
     draw_row(ROW1, ROW1_SWITCH, ROW1_VALUES, 60)
     draw_row(ROW2_MOD, ROW2_SWITCH, ROW2_MOD_VALUES, 182)
 
-    # file selector bar (CSS .ns-files: left 22, top 306, 140px pitch, 132x22 boxes)
+    # graphic EQ row (CSS .ns-row-eq: top 300)
+    draw_eq_row(img, draw, 300, label_font, value_font)
+
+    # file selector bar (CSS .ns-files: left 22, top 448, 148px pitch, 132x22 boxes)
     file_labels = ["NEURAL MODEL", "IR 1", "IR 2", "IR 3", "IR 4"]
     for i, label in enumerate(file_labels):
         bx = 22 + i * 148
-        draw.text((bx * SS, (306 + 7) * SS), label, font=label_font, fill=TEXT, anchor="lm")
-        box = [bx * SS, 322 * SS, (bx + 132) * SS, (322 + 22) * SS]
+        draw.text((bx * SS, (448 + 7) * SS), label, font=label_font, fill=TEXT, anchor="lm")
+        box = [bx * SS, 464 * SS, (bx + 132) * SS, (464 + 22) * SS]
         draw.rounded_rectangle(box, radius=4 * SS, fill=(16, 17, 20), outline=(58, 60, 66), width=SS)
-        draw.text(((bx + 6) * SS, (322 + 11) * SS), "-- none --", font=value_font,
+        draw.text(((bx + 6) * SS, (464 + 11) * SS), "-- none --", font=value_font,
                   fill=AMBER, anchor="lm")
 
-    # footswitch + led (CSS: fsw 762/316 48px, led 779/292 14px)
-    fx, fy = 786, 340
+    # footswitch + led (CSS: fsw 880/452 48px, led 897/428 14px)
+    fx, fy = 904, 476
     draw.ellipse([(fx - 24) * SS, (fy - 24) * SS, (fx + 24) * SS, (fy + 24) * SS],
                  fill=(60, 62, 68), outline=PANEL_EDGE, width=2 * SS)
     draw.ellipse([(fx - 16) * SS, (fy - 16) * SS, (fx + 16) * SS, (fy + 16) * SS],
                  fill=(84, 86, 94))
-    draw.ellipse([(fx - 7) * SS, (299 - 7) * SS, (fx + 7) * SS, (299 + 7) * SS],
+    draw.ellipse([(fx - 7) * SS, (435 - 7) * SS, (fx + 7) * SS, (435 + 7) * SS],
                  fill=AMBER, outline=AMBER_DIM, width=SS)
 
     img = img.resize((PEDAL_W, PEDAL_H), Image.LANCZOS)
@@ -308,6 +400,7 @@ if __name__ == "__main__":
     make_knob_strip()
     make_switch_strip()
     make_footswitch_strip()
+    make_fader_strip()
     make_screenshot()
     make_screenshot_mod()
     make_thumbnail()

@@ -3,7 +3,7 @@
 
     <div class="ns-header">
         <h1>NamStack</h1>
-        <span class="ns-subtitle">NAM &middot; AIDA-X &middot; TONE STACK &middot; IR MIXER &middot; DOUBLER</span>
+        <span class="ns-subtitle">NAM &middot; AIDA-X &middot; TONE STACK &middot; 5-BAND EQ &middot; IR MIXER &middot; DOUBLER</span>
         <span class="ns-brand">Pilali</span>
     </div>
 
@@ -16,6 +16,11 @@
         <div class="ns-ctrl">
             <p>STACK</p>
             <div class="ns-knob" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:ts_model"></div>
+            <div class="ns-value"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>STACK ON</p>
+            <div class="ns-switch" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:ts_on"></div>
             <div class="ns-value"></div>
         </div>
         <div class="ns-ctrl">
@@ -98,15 +103,69 @@
         </div>
     </div>
 
+    <!-- 5-band graphic EQ, Mesa/Boogie Mark voicing (80 / 240 / 750 / 2200 / 6600 Hz).
+         Its Pre/Post picks which side of the neural model it sits on; when it
+         lands on the same side as the tone stack, it runs after it. -->
+    <div class="ns-row ns-row-eq">
+        <div class="ns-ctrl">
+            <p>EQ ON</p>
+            <div class="ns-switch" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:geq_on"></div>
+            <div class="ns-value"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>EQ PRE/POST</p>
+            <div class="ns-switch" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:geq_position"></div>
+            <div class="ns-value"></div>
+        </div>
+        <div class="ns-ctrl-fader">
+            <p>80</p>
+            <div class="ns-fader" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:geq_80"></div>
+            <div class="ns-value" mod-role="input-parameter-value" mod-parameter-uri="urn:pilali:NamStack:geq_80"></div>
+        </div>
+        <div class="ns-ctrl-fader">
+            <p>240</p>
+            <div class="ns-fader" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:geq_240"></div>
+            <div class="ns-value" mod-role="input-parameter-value" mod-parameter-uri="urn:pilali:NamStack:geq_240"></div>
+        </div>
+        <div class="ns-ctrl-fader">
+            <p>750</p>
+            <div class="ns-fader" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:geq_750"></div>
+            <div class="ns-value" mod-role="input-parameter-value" mod-parameter-uri="urn:pilali:NamStack:geq_750"></div>
+        </div>
+        <div class="ns-ctrl-fader">
+            <p>2200</p>
+            <div class="ns-fader" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:geq_2200"></div>
+            <div class="ns-value" mod-role="input-parameter-value" mod-parameter-uri="urn:pilali:NamStack:geq_2200"></div>
+        </div>
+        <div class="ns-ctrl-fader">
+            <p>6600</p>
+            <div class="ns-fader" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:geq_6600"></div>
+            <div class="ns-value" mod-role="input-parameter-value" mod-parameter-uri="urn:pilali:NamStack:geq_6600"></div>
+        </div>
+    </div>
+
     <div class="ns-led" mod-role="bypass-light"></div>
     <div class="ns-footswitch" mod-role="bypass"></div>
 
-    {{#effect.ports.audio.input}}
-    <div class="ns-jack-in ns-jack-{{symbol}} mod-audio-input" title="{{name}}"
-         mod-role="input-audio-port" mod-port-symbol="{{symbol}}"></div>
-    {{/effect.ports.audio.input}}
-    {{#effect.ports.audio.output}}
-    <div class="ns-jack-out ns-jack-{{symbol}} mod-audio-output" title="{{name}}"
-         mod-role="output-audio-port" mod-port-symbol="{{symbol}}"></div>
-    {{/effect.ports.audio.output}}
+    <!-- Audio jacks: mod-ui lays these out itself from the .mod-pedal-input /
+         .mod-pedal-output wrappers. Do NOT put mod-audio-input / mod-audio-output
+         on them: those classes belong to the pedalboard's hardware jacks and
+         dashboard.css pins them (output left, input right), which flips a pedal's
+         jacks and hides its input. -->
+    <div class="mod-pedal-input">
+        {{#effect.ports.audio.input}}
+        <div class="mod-input mod-input-disconnected" title="{{name}}"
+             mod-role="input-audio-port" mod-port-symbol="{{symbol}}">
+            <div class="mod-pedal-input-image"></div>
+        </div>
+        {{/effect.ports.audio.input}}
+    </div>
+    <div class="mod-pedal-output">
+        {{#effect.ports.audio.output}}
+        <div class="mod-output mod-output-disconnected" title="{{name}}"
+             mod-role="output-audio-port" mod-port-symbol="{{symbol}}">
+            <div class="mod-pedal-output-image"></div>
+        </div>
+        {{/effect.ports.audio.output}}
+    </div>
 </div>

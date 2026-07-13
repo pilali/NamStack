@@ -3,7 +3,7 @@
 
     <div class="ns-header">
         <h1>NamStack</h1>
-        <span class="ns-subtitle">NAM &middot; AIDA-X &middot; TONE STACK &middot; IR MIXER &middot; DOUBLER</span>
+        <span class="ns-subtitle">NAM &middot; AIDA-X &middot; TONE STACK &middot; 5-BAND EQ &middot; IR MIXER &middot; DOUBLER</span>
         <span class="ns-brand">Pilali</span>
     </div>
 
@@ -16,6 +16,11 @@
         <div class="ns-ctrl">
             <p>STACK</p>
             <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="ts_model"></div>
+            <div class="ns-value"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>STACK ON</p>
+            <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="ts_on"></div>
             <div class="ns-value"></div>
         </div>
         <div class="ns-ctrl">
@@ -100,6 +105,47 @@
             <p>QUALITY</p>
             <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="quality"></div>
             <div class="ns-value" mod-role="input-control-value" mod-port-symbol="quality"></div>
+        </div>
+    </div>
+
+    <!-- 5-band graphic EQ, Mesa/Boogie Mark voicing (80 / 240 / 750 / 2200 / 6600 Hz).
+         Its Pre/Post picks which side of the neural model it sits on; when it
+         lands on the same side as the tone stack, it runs after it. -->
+    <div class="ns-row ns-row-eq">
+        <div class="ns-ctrl">
+            <p>EQ ON</p>
+            <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="geq_on"></div>
+            <div class="ns-value"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>EQ PRE/POST</p>
+            <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="geq_position"></div>
+            <div class="ns-value"></div>
+        </div>
+        <div class="ns-ctrl-fader">
+            <p>80</p>
+            <div class="ns-fader" mod-role="input-control-port" mod-port-symbol="geq_80"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="geq_80"></div>
+        </div>
+        <div class="ns-ctrl-fader">
+            <p>240</p>
+            <div class="ns-fader" mod-role="input-control-port" mod-port-symbol="geq_240"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="geq_240"></div>
+        </div>
+        <div class="ns-ctrl-fader">
+            <p>750</p>
+            <div class="ns-fader" mod-role="input-control-port" mod-port-symbol="geq_750"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="geq_750"></div>
+        </div>
+        <div class="ns-ctrl-fader">
+            <p>2200</p>
+            <div class="ns-fader" mod-role="input-control-port" mod-port-symbol="geq_2200"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="geq_2200"></div>
+        </div>
+        <div class="ns-ctrl-fader">
+            <p>6600</p>
+            <div class="ns-fader" mod-role="input-control-port" mod-port-symbol="geq_6600"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="geq_6600"></div>
         </div>
     </div>
 

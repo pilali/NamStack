@@ -23,8 +23,14 @@ NamStackAudioProcessor::NamStackAudioProcessor()
     pOutGain = apvts.getRawParameterValue (ParamIDs::outputGain);
     pAidaParam1 = apvts.getRawParameterValue (ParamIDs::aidaParam1);
     pAidaParam2 = apvts.getRawParameterValue (ParamIDs::aidaParam2);
+    pTsOn = apvts.getRawParameterValue (ParamIDs::tsOn);
     pTsModel = apvts.getRawParameterValue (ParamIDs::tsModel);
     pTsPosition = apvts.getRawParameterValue (ParamIDs::tsPosition);
+    pGeqOn = apvts.getRawParameterValue (ParamIDs::geqOn);
+    pGeqPosition = apvts.getRawParameterValue (ParamIDs::geqPosition);
+    for (int band = 0; band < nsdsp::GraphicEQ::numBands; ++band)
+        pGeqBand[band] = apvts.getRawParameterValue (
+            ParamIDs::geqBand (band, nsdsp::GraphicEQ::getFrequencies()[(size_t) band]));
     pTsBass = apvts.getRawParameterValue (ParamIDs::tsBass);
     pTsMid = apvts.getRawParameterValue (ParamIDs::tsMid);
     pTsTreble = apvts.getRawParameterValue (ParamIDs::tsTreble);
@@ -97,15 +103,36 @@ juce::AudioProcessorValueTreeState::ParameterLayout NamStackAudioProcessor::crea
     for (const auto& m : nsdsp::ToneStack::getModels())
         toneStackNames.add (m.name);
 
+    const juce::StringArray positionNames { "Pre (before amp)", "Post (after amp)" };
+
+    params.push_back (std::make_unique<BoolParam> (id (ParamIDs::tsOn), "Tone Stack On", true));
     params.push_back (std::make_unique<ChoiceParam> (id (ParamIDs::tsModel), "Tone Stack", toneStackNames, 0));
     params.push_back (std::make_unique<ChoiceParam> (id (ParamIDs::tsPosition), "Tone Stack Position",
-                                                     juce::StringArray { "Pre (before amp)", "Post (after amp)" }, 1));
+                                                     positionNames, 1));
     params.push_back (std::make_unique<FloatParam> (id (ParamIDs::tsBass), "Bass",
                                                     juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));
     params.push_back (std::make_unique<FloatParam> (id (ParamIDs::tsMid), "Middle",
                                                     juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));
     params.push_back (std::make_unique<FloatParam> (id (ParamIDs::tsTreble), "Treble",
                                                     juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));
+
+    // 5-band graphic EQ (Mesa/Boogie Mark voicing). Its position is independent
+    // of the tone stack's; when both land on the same side of the neural model,
+    // the graphic EQ runs after the tone stack (see processBlock).
+    params.push_back (std::make_unique<BoolParam> (id (ParamIDs::geqOn), "Graphic EQ On", false));
+    params.push_back (std::make_unique<ChoiceParam> (id (ParamIDs::geqPosition), "Graphic EQ Position",
+                                                     positionNames, 1));
+
+    const auto maxGain = nsdsp::GraphicEQ::maxGainDb;
+    for (int band = 0; band < nsdsp::GraphicEQ::numBands; ++band)
+    {
+        const auto hz = nsdsp::GraphicEQ::getFrequencies()[(size_t) band];
+        params.push_back (std::make_unique<FloatParam> (
+            id (ParamIDs::geqBand (band, hz)),
+            "EQ " + juce::String (juce::roundToInt (hz)) + " Hz",
+            juce::NormalisableRange<float> (-maxGain, maxGain, 0.1f), 0.0f,
+            juce::AudioParameterFloatAttributes().withLabel ("dB")));
+    }
 
     for (int i = 0; i < nsdsp::IRStack::numSlots; ++i)
     {
@@ -161,6 +188,7 @@ void NamStackAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
     outputGain.reset (sampleRate, 0.02);
 
     toneStack.prepare (sampleRate);
+    graphicEq.prepare (sampleRate);
     irStack.prepare ({ sampleRate, (juce::uint32) samplesPerBlock, 1 });
     doubler.prepare (sampleRate, samplesPerBlock);
 
@@ -179,6 +207,7 @@ void NamStackAudioProcessor::releaseResources()
     irStack.reset();
     doubler.reset();
     toneStack.reset();
+    graphicEq.reset();
 }
 
 void NamStackAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
@@ -222,13 +251,28 @@ void NamStackAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     inputGain.setTargetValue (juce::Decibels::decibelsToGain (pInGain->load()));
     inputGain.applyGain (mono, numSamples);
 
-    // ------------------------------------------------- tone stack (pre) ---
+    // ----------------------------------------------------- equalisers (pre)
+    // Each EQ picks its own side of the neural model. Running the tone stack
+    // before the graphic EQ within both the pre and the post block is what gives
+    // the required ordering: when the two land on the same side, the graphic EQ
+    // follows the tone stack.
     const auto tsModelIndex = (int) pTsModel->load();
     const bool tsIsPre = ((int) pTsPosition->load()) == 0;
+    const bool tsOn = pTsOn->load() > 0.5f;
     toneStack.setParams (tsModelIndex, pTsBass->load(), pTsMid->load(), pTsTreble->load());
 
-    if (tsIsPre)
+    float geqGains[nsdsp::GraphicEQ::numBands];
+    for (int band = 0; band < nsdsp::GraphicEQ::numBands; ++band)
+        geqGains[band] = pGeqBand[band]->load();
+    graphicEq.setGains (geqGains);
+
+    const bool geqIsPre = ((int) pGeqPosition->load()) == 0;
+    const bool geqOn = pGeqOn->load() > 0.5f;
+
+    if (tsIsPre && tsOn)
         toneStack.processBlock (mono, numSamples);
+    if (geqIsPre && geqOn)
+        graphicEq.processBlock (mono, numSamples);
 
     // ---------------------------------------------------------- amp model
     {
@@ -240,9 +284,11 @@ void NamStackAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
         }
     }
 
-    // ------------------------------------------------- tone stack (post) --
-    if (! tsIsPre)
+    // ---------------------------------------------------- equalisers (post)
+    if (! tsIsPre && tsOn)
         toneStack.processBlock (mono, numSamples);
+    if (! geqIsPre && geqOn)
+        graphicEq.processBlock (mono, numSamples);
 
     // ------------------------------------------------------------- IR mix
     for (int i = 0; i < nsdsp::IRStack::numSlots; ++i)

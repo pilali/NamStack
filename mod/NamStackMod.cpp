@@ -25,6 +25,7 @@
 #include "core/IRMixer.h"
 #include "dsp/Doubler.h"
 #include "dsp/NeuralModel.h"
+#include "dsp/GraphicEQ.h"
 #include "dsp/ToneStack.h"
 
 #include <algorithm>
@@ -90,6 +91,17 @@ enum PortIndex
     kPortDblWidth,
     kPortOutGain,
     kPortQuality,
+    // Appended after kPortQuality on purpose: LV2 identifies control ports by
+    // index, so inserting these in their "logical" place would silently remap
+    // the controls of every pedalboard already saved with this plugin.
+    kPortTsOn,
+    kPortGeqOn,
+    kPortGeqPosition,
+    kPortGeqBand1, // 80 Hz; the five bands are contiguous, see kPortGeqBand1 + i
+    kPortGeqBand2, // 240 Hz
+    kPortGeqBand3, // 750 Hz
+    kPortGeqBand4, // 2200 Hz
+    kPortGeqBand5, // 6600 Hz
     kPortCount
 };
 
@@ -178,6 +190,7 @@ struct NamStackMod
     std::string filePaths[kNumFileSlots];
 
     nsdsp::ToneStack toneStack;
+    nsdsp::GraphicEQ graphicEq;
     nsdsp::IRMixer irMixer;
     nsdsp::Doubler doubler;
 
@@ -210,6 +223,7 @@ void updateBlockSizes (NamStackMod* self, int maxBlock)
 void prepareDsp (NamStackMod* self)
 {
     self->toneStack.prepare (self->sampleRate);
+    self->graphicEq.prepare (self->sampleRate);
     self->irMixer.prepare (self->sampleRate, self->partitionSize, std::max (self->maxBlockSize, kMaxChunk));
     self->doubler.prepare (self->sampleRate, self->maxBlockSize);
 
@@ -549,6 +563,7 @@ void activate (LV2_Handle instance)
 {
     auto* self = static_cast<NamStackMod*> (instance);
     self->toneStack.reset();
+    self->graphicEq.reset();
     self->irMixer.reset();
     self->doubler.reset();
     self->activated = true;
@@ -628,6 +643,15 @@ void run (LV2_Handle instance, uint32_t nSamples)
                                param (self, kPortTsMid, 0.5f),
                                param (self, kPortTsTreble, 0.5f));
     const bool tsIsPre = param (self, kPortTsPosition) < 0.5f;
+    const bool tsOn = param (self, kPortTsOn, 1.0f) > 0.5f;
+
+    float geqGains[nsdsp::GraphicEQ::numBands];
+    for (int band = 0; band < nsdsp::GraphicEQ::numBands; ++band)
+        geqGains[band] = param (self, (PortIndex) (kPortGeqBand1 + band));
+    self->graphicEq.setGains (geqGains);
+
+    const bool geqIsPre = param (self, kPortGeqPosition, 1.0f) < 0.5f;
+    const bool geqOn = param (self, kPortGeqOn) > 0.5f;
 
     for (int slot = 0; slot < 4; ++slot)
         self->irMixer.setSlotParams (slot,
@@ -679,14 +703,22 @@ void run (LV2_Handle instance, uint32_t nSamples)
             mono[i] = in[i] * self->inGainSmoothed;
         }
 
-        if (tsIsPre)
+        // Each EQ picks its own side of the neural model. Running the tone stack
+        // before the graphic EQ within both the pre and the post block is what
+        // gives the required ordering: when the two land on the same side, the
+        // graphic EQ follows the tone stack.
+        if (tsIsPre && tsOn)
             self->toneStack.processBlock (mono, n);
+        if (geqIsPre && geqOn)
+            self->graphicEq.processBlock (mono, n);
 
         if (self->model != nullptr)
             self->model->process (mono, n);
 
-        if (! tsIsPre)
+        if (! tsIsPre && tsOn)
             self->toneStack.processBlock (mono, n);
+        if (! geqIsPre && geqOn)
+            self->graphicEq.processBlock (mono, n);
 
         self->irMixer.process (mono, self->busL.data(), self->busR.data(), n);
 

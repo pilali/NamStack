@@ -6,10 +6,15 @@ Plugin **LV2 / VST3 / Standalone** (JUCE) de modélisation d'ampli guitare, insp
 ## Chaîne de signal
 
 ```
-Entrée → Gain d'entrée → [Tone stack si "Pre"] → Modèle neuronal (NAM / AIDA-X)
-       → [Tone stack si "Post"] → Mixeur d'IR (4 slots, volume + panoramique)
+Entrée → Gain d'entrée → [Tone stack si "Pre"] → [EQ 5 bandes si "Pre"]
+       → Modèle neuronal (NAM / AIDA-X)
+       → [Tone stack si "Post"] → [EQ 5 bandes si "Post"]
+       → Mixeur d'IR (4 slots, volume + panoramique)
        → Doubleur → Gain de sortie → Sortie stéréo
 ```
+
+Les deux égaliseurs ont chacun leur on/off et leur commutateur Pre/Post ; à
+position égale, l'EQ 5 bandes passe après le tone stack (voir plus bas).
 
 ## Fonctionnalités
 
@@ -49,9 +54,44 @@ bibliothèques Faust) :
 | Ampeg SVT | 250k | 1M | 25k | 32k | 470p | 22n | 22n |
 | Soldano SLO-100 | 250k | 1M | 25k | 47k | 470p | 20n | 20n |
 
-Le tone stack est **commutable avant (« Pre ») ou après (« Post »)** le modèle
-neuronal. Comme le circuit réel est passif, il atténue le signal (creux de
-médiums caractéristique) — compensez avec le gain de sortie si nécessaire.
+Le tone stack a son propre **on/off** et est **commutable avant (« Pre ») ou
+après (« Post »)** le modèle neuronal. Comme le circuit réel est passif, il
+atténue le signal (creux de médiums caractéristique) — compensez avec le gain
+de sortie si nécessaire.
+
+### Égaliseur graphique 5 bandes (Mesa/Boogie)
+
+Le second égaliseur reprend les fréquences documentées du **graphic EQ des Mesa
+Boogie Mark** (Mark IIC+ / III / IV), à curseurs verticaux :
+
+| | | | | |
+|---|---|---|---|---|
+| **80 Hz** | **240 Hz** | **750 Hz** | **2200 Hz** | **6600 Hz** |
+
+Course de **±12 dB** par bande. Les centres sont espacés d'un facteur ~3, soit
+environ 1,585 octave ; la relation usuelle des égaliseurs graphiques
+`Q = 2^(N/2) / (2^N − 1)` fixe donc **Q ≈ 0,87**. Chaque bande est un biquad
+« peaking » (Robert Bristow-Johnson), les cinq étant montés en série.
+
+> Le circuit réel est un réseau passif **interactif** : les bandes se tirent
+> dessus et l'ensemble perd du niveau quand on l'engage — c'est précisément ce
+> qui donne son caractère au réglage « en V ». La cascade de filtres
+> indépendants implémentée ici est l'approximation standard que décrivent les
+> fréquences documentées ; elle ne reproduit pas cette interaction.
+
+Il possède lui aussi un **on/off** et une option **Pre/Post** indépendante de
+celle du tone stack.
+
+**Ordre dans la chaîne** — chaque égaliseur choisit son côté du modèle neuronal.
+Lorsque les deux se retrouvent **du même côté**, l'égaliseur graphique passe
+**après** le tone stack :
+
+| Tone stack | EQ graphique | Chaîne |
+|---|---|---|
+| Pre | Pre | `→ tone stack → EQ → modèle →` |
+| Pre | Post | `→ tone stack → modèle → EQ →` |
+| Post | Pre | `→ EQ → modèle → tone stack →` |
+| Post | Post | `→ modèle → tone stack → EQ →` |
 
 ### Impulse responses (IR)
 - **4 slots** de convolution en parallèle (fichiers `.wav`, `.aiff`, `.flac`)

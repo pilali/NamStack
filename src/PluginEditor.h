@@ -47,11 +47,24 @@ private:
 
     // ------------------------------------------------------------ tone stack
     juce::GroupComponent toneGroup { {}, "TONE STACK" };
+    juce::ToggleButton toneOnButton { "On" };
     juce::ComboBox toneStackBox, tonePositionBox;
     juce::Slider bassSlider, midSlider, trebleSlider;
     juce::Label bassLabel { {}, "Bass" }, midLabel { {}, "Middle" }, trebleLabel { {}, "Treble" };
+    std::unique_ptr<ButtonAttachment> toneOnAttachment;
     std::unique_ptr<ComboAttachment> toneStackAttachment, tonePositionAttachment;
     std::unique_ptr<SliderAttachment> bassAttachment, midAttachment, trebleAttachment;
+
+    // ------------------------------------------------------------ graphic EQ
+    // Mesa/Boogie-style 5-band, with its own on/off and its own pre/post.
+    juce::GroupComponent geqGroup { {}, "GRAPHIC EQ (5-BAND)" };
+    juce::ToggleButton geqOnButton { "On" };
+    juce::ComboBox geqPositionBox;
+    juce::Slider geqSliders[nsdsp::GraphicEQ::numBands];
+    juce::Label geqLabels[nsdsp::GraphicEQ::numBands];
+    std::unique_ptr<ButtonAttachment> geqOnAttachment;
+    std::unique_ptr<ComboAttachment> geqPositionAttachment;
+    std::unique_ptr<SliderAttachment> geqAttachments[nsdsp::GraphicEQ::numBands];
 
     // -------------------------------------------------------------- IR slots
     juce::GroupComponent irGroup { {}, "CABINET IMPULSE RESPONSES" };

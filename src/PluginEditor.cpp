@@ -66,8 +66,11 @@ NamStackAudioProcessorEditor::NamStackAudioProcessorEditor (NamStackAudioProcess
 
     // ------------------------------------------------------------ tone stack
     addAndMakeVisible (toneGroup);
+    addAndMakeVisible (toneOnButton);
     addAndMakeVisible (toneStackBox);
     addAndMakeVisible (tonePositionBox);
+
+    toneOnAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::tsOn, toneOnButton);
 
     if (auto* choice = dynamic_cast<juce::AudioParameterChoice*> (apvts.getParameter (ParamIDs::tsModel)))
         toneStackBox.addItemList (choice->choices, 1);
@@ -90,6 +93,36 @@ NamStackAudioProcessorEditor::NamStackAudioProcessorEditor (NamStackAudioProcess
     bassAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::tsBass, bassSlider);
     midAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::tsMid, midSlider);
     trebleAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::tsTreble, trebleSlider);
+
+    // ------------------------------------------------------------ graphic EQ
+    addAndMakeVisible (geqGroup);
+    addAndMakeVisible (geqOnButton);
+    addAndMakeVisible (geqPositionBox);
+
+    if (auto* choice = dynamic_cast<juce::AudioParameterChoice*> (apvts.getParameter (ParamIDs::geqPosition)))
+        geqPositionBox.addItemList (choice->choices, 1);
+
+    geqOnAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::geqOn, geqOnButton);
+    geqPositionAttachment = std::make_unique<ComboAttachment> (apvts, ParamIDs::geqPosition, geqPositionBox);
+
+    for (int band = 0; band < nsdsp::GraphicEQ::numBands; ++band)
+    {
+        const auto hz = nsdsp::GraphicEQ::getFrequencies()[(size_t) band];
+
+        // Vertical faders, like the real thing.
+        auto& slider = geqSliders[band];
+        slider.setSliderStyle (juce::Slider::LinearVertical);
+        slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 56, 16);
+        slider.setDoubleClickReturnValue (true, 0.0); // back to flat
+        addAndMakeVisible (slider);
+
+        geqLabels[band].setText (juce::String (juce::roundToInt (hz)) + " Hz", juce::dontSendNotification);
+        setupCaption (geqLabels[band]);
+        addAndMakeVisible (geqLabels[band]);
+
+        geqAttachments[band] = std::make_unique<SliderAttachment> (
+            apvts, ParamIDs::geqBand (band, hz), slider);
+    }
 
     // -------------------------------------------------------------- IR slots
     addAndMakeVisible (irGroup);
@@ -154,7 +187,7 @@ NamStackAudioProcessorEditor::NamStackAudioProcessorEditor (NamStackAudioProcess
     processor.fileStateChanged.addChangeListener (this);
     refreshFileLabels();
 
-    setSize (920, 700);
+    setSize (920, 878); // + the graphic-EQ group
 }
 
 NamStackAudioProcessorEditor::~NamStackAudioProcessorEditor()
@@ -279,6 +312,9 @@ void NamStackAudioProcessorEditor::resized()
     toneGroup.setBounds (toneArea);
     auto toneInner = toneArea.reduced (14, 22);
 
+    toneOnButton.setBounds (toneInner.removeFromLeft (56).withHeight (26));
+    toneInner.removeFromLeft (8);
+
     auto comboColumn = toneInner.removeFromLeft (260);
     toneStackBox.setBounds (comboColumn.removeFromTop (26));
     comboColumn.removeFromTop (10);
@@ -297,6 +333,28 @@ void NamStackAudioProcessorEditor::resized()
     placeKnob (bassSlider, bassLabel);
     placeKnob (midSlider, midLabel);
     placeKnob (trebleSlider, trebleLabel);
+
+    bounds.removeFromTop (8);
+
+    // ------------------------------------------------------------ graphic EQ
+    auto geqArea = bounds.removeFromTop (170);
+    geqGroup.setBounds (geqArea);
+    auto geqInner = geqArea.reduced (14, 22);
+
+    auto geqControls = geqInner.removeFromLeft (200);
+    geqOnButton.setBounds (geqControls.removeFromTop (26));
+    geqControls.removeFromTop (10);
+    geqPositionBox.setBounds (geqControls.removeFromTop (26));
+
+    geqInner.removeFromLeft (20);
+    const auto faderWidth = geqInner.getWidth() / nsdsp::GraphicEQ::numBands;
+
+    for (int band = 0; band < nsdsp::GraphicEQ::numBands; ++band)
+    {
+        auto area = geqInner.removeFromLeft (faderWidth);
+        geqLabels[band].setBounds (area.removeFromBottom (16));
+        geqSliders[band].setBounds (area);
+    }
 
     bounds.removeFromTop (8);
 

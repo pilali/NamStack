@@ -3,8 +3,8 @@
 
 .namstackmod{{{cns}}} {
     position: absolute;
-    width: 840px;
-    height: 400px;
+    width: 960px;
+    height: 520px;
     background: linear-gradient(#26282e, #181a1e);
     border: 2px solid #0c0d0f;
     border-radius: 12px;
@@ -60,9 +60,16 @@
 
 .namstackmod{{{cns}}} .ns-row-amp { top: 60px; }
 .namstackmod{{{cns}}} .ns-row-fx  { top: 182px; }
+.namstackmod{{{cns}}} .ns-row-eq  { top: 300px; }
 
 .namstackmod{{{cns}}} .ns-ctrl {
     width: 88px;
+    text-align: center;
+}
+
+/* one 5-band graphic-EQ slider cell */
+.namstackmod{{{cns}}} .ns-ctrl-fader {
+    width: 72px;
     text-align: center;
 }
 
@@ -110,11 +117,20 @@
     cursor: pointer;
 }
 
+.namstackmod{{{cns}}} .ns-fader {
+    width: 40px;
+    height: 96px;
+    margin: 2px auto 0;
+    background-image: url(/resources/fader.png{{{ns}}});
+    background-size: auto 96px;   /* 1320x96 = 33 frames -> 32 steps */
+    cursor: pointer;
+}
+
 /* ------------------------------------------------------- file selectors */
 .namstackmod{{{cns}}} .ns-files {
     position: absolute;
     left: 22px;
-    top: 306px;
+    top: 448px;
     width: 700px;
     display: -webkit-box; display: -moz-box; display: flex;
 }
@@ -183,8 +199,8 @@
 /* ---------------------------------------------------- bypass footswitch */
 .namstackmod{{{cns}}} .ns-footswitch {
     position: absolute;
-    left: 762px;
-    top: 316px;
+    left: 880px;
+    top: 452px;
     width: 48px;
     height: 48px;
     background-image: url(/resources/footswitch.png{{{ns}}});
@@ -194,8 +210,8 @@
 
 .namstackmod{{{cns}}} .ns-led {
     position: absolute;
-    left: 779px;
-    top: 292px;
+    left: 897px;
+    top: 428px;
     width: 14px;
     height: 14px;
     border-radius: 50%;

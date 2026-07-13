@@ -89,6 +89,7 @@ add_library(namstack_core STATIC
     src/dsp/NeuralModel.cpp
     src/dsp/NamArchitectures.cpp
     src/dsp/ToneStack.cpp
+    src/dsp/GraphicEQ.cpp
     src/dsp/Doubler.cpp)
 
 target_include_directories(namstack_core PUBLIC src)
@@ -208,6 +209,7 @@ if(NAMSTACK_BUILD_MOD_LV2)
         ${CMAKE_CURRENT_SOURCE_DIR}/modgui/resources/knob.png
         ${CMAKE_CURRENT_SOURCE_DIR}/modgui/resources/switch.png
         ${CMAKE_CURRENT_SOURCE_DIR}/modgui/resources/footswitch.png
+        ${CMAKE_CURRENT_SOURCE_DIR}/modgui/resources/fader.png
         ${CMAKE_CURRENT_SOURCE_DIR}/modgui/resources/thumbnail-namstack.png
         ${CMAKE_CURRENT_SOURCE_DIR}/modgui/resources/screenshot-namstack-mod.png
         ${CMAKE_CURRENT_SOURCE_DIR}/mod/modgui/icon-namstack-mod.html

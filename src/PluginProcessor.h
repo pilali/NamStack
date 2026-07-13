@@ -6,6 +6,7 @@
 #include "dsp/Doubler.h"
 #include "dsp/IRStack.h"
 #include "dsp/NeuralModel.h"
+#include "dsp/GraphicEQ.h"
 #include "dsp/ToneStack.h"
 
 class NamStackAudioProcessor : public juce::AudioProcessor,
@@ -77,6 +78,7 @@ private:
 
     // ------------------------------------------------------------------ DSP
     nsdsp::ToneStack toneStack;
+    nsdsp::GraphicEQ graphicEq;
     nsdsp::IRStack irStack;
     nsdsp::Doubler doubler;
 
@@ -96,11 +98,15 @@ private:
     std::atomic<float>* pOutGain = nullptr;
     std::atomic<float>* pAidaParam1 = nullptr;
     std::atomic<float>* pAidaParam2 = nullptr;
+    std::atomic<float>* pTsOn = nullptr;
     std::atomic<float>* pTsModel = nullptr;
     std::atomic<float>* pTsPosition = nullptr;
     std::atomic<float>* pTsBass = nullptr;
     std::atomic<float>* pTsMid = nullptr;
     std::atomic<float>* pTsTreble = nullptr;
+    std::atomic<float>* pGeqOn = nullptr;
+    std::atomic<float>* pGeqPosition = nullptr;
+    std::atomic<float>* pGeqBand[nsdsp::GraphicEQ::numBands] = {};
     std::atomic<float>* pIrOn[nsdsp::IRStack::numSlots] = {};
     std::atomic<float>* pIrGain[nsdsp::IRStack::numSlots] = {};
     std::atomic<float>* pIrPan[nsdsp::IRStack::numSlots] = {};

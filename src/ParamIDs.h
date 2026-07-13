@@ -15,11 +15,22 @@ inline constexpr auto aidaParam2 = "aida_p2";
 // Quality vs CPU trade-off of slimmable NAM models (A2)
 inline constexpr auto modelQuality = "model_quality";
 
+inline constexpr auto tsOn = "ts_on";
 inline constexpr auto tsModel = "ts_model";
 inline constexpr auto tsPosition = "ts_position";
 inline constexpr auto tsBass = "ts_bass";
 inline constexpr auto tsMid = "ts_mid";
 inline constexpr auto tsTreble = "ts_treble";
+
+// Mesa/Boogie-style 5-band graphic EQ. Band ids are geq_80 .. geq_6600, built
+// from the centre frequencies in nsdsp::GraphicEQ so the two cannot drift apart.
+inline constexpr auto geqOn = "geq_on";
+inline constexpr auto geqPosition = "geq_position";
+inline juce::String geqBand (int band, float frequencyHz)
+{
+    juce::ignoreUnused (band);
+    return "geq_" + juce::String (juce::roundToInt (frequencyHz));
+}
 
 // Per-IR-slot ids are built as ir<N>_on / ir<N>_gain / ir<N>_pan (N = 1..4)
 inline juce::String irOn(int slot) { return "ir" + juce::String(slot + 1) + "_on"; }

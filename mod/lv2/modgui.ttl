@@ -78,5 +78,37 @@
             lv2:index 16 ;
             lv2:symbol "quality" ;
             lv2:name "Model Quality" ;
+        ] , [
+            lv2:index 17 ;
+            lv2:symbol "ts_on" ;
+            lv2:name "Tone Stack On" ;
+        ] , [
+            lv2:index 18 ;
+            lv2:symbol "geq_on" ;
+            lv2:name "Graphic EQ On" ;
+        ] , [
+            lv2:index 19 ;
+            lv2:symbol "geq_position" ;
+            lv2:name "Graphic EQ Position" ;
+        ] , [
+            lv2:index 20 ;
+            lv2:symbol "geq_80" ;
+            lv2:name "EQ 80 Hz" ;
+        ] , [
+            lv2:index 21 ;
+            lv2:symbol "geq_240" ;
+            lv2:name "EQ 240 Hz" ;
+        ] , [
+            lv2:index 22 ;
+            lv2:symbol "geq_750" ;
+            lv2:name "EQ 750 Hz" ;
+        ] , [
+            lv2:index 23 ;
+            lv2:symbol "geq_2200" ;
+            lv2:name "EQ 2200 Hz" ;
+        ] , [
+            lv2:index 24 ;
+            lv2:symbol "geq_6600" ;
+            lv2:name "EQ 6600 Hz" ;
         ] ;
     ] .
