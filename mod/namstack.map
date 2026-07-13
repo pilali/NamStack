@@ -1,0 +1,14 @@
+/* Only the LV2 entry point may be dynamic. Everything else is localised so the
+ * host cannot interpose this plugin's symbols against another one built from
+ * the same libraries -- see the visibility notes in CMakeLists.txt and the
+ * README. -fvisibility=hidden alone is not enough: libstdc++'s headers force
+ * default visibility on their own template instantiations (basic_string,
+ * vector, ...), and which of those a given GCC emits out of line varies by
+ * compiler version. The version script catches them all, whatever the
+ * toolchain. */
+{
+    global:
+        lv2_descriptor;
+    local:
+        *;
+};
