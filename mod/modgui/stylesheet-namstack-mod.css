@@ -85,12 +85,19 @@
 }
 
 /* ------------------------------------------------------------ widgets */
+/* background-size MUST carry the frame height in px, not a percentage: mod-ui
+   derives the film-strip frame count from it with
+       filmSteps = round(bgHeight * imgWidth / (elemWidth * imgHeight)) - 1
+   (modgui.js, getAndSetSize) and reads bgHeight with parseInt() on the CSS
+   string. "auto 100%" therefore yields 100, not the element height, inflating
+   the step count and making the strip wrap around mid-sweep. Keep this value
+   equal to the element's width so each frame is scaled to exactly one step. */
 .namstackmod{{{cns}}} .ns-knob {
     width: 56px;
     height: 56px;
     margin: 2px auto 0;
     background-image: url(/resources/knob.png{{{ns}}});
-    background-size: auto 100%;
+    background-size: auto 56px;   /* 3136x64 = 49 frames -> 48 steps */
     cursor: pointer;
 }
 
@@ -99,7 +106,7 @@
     height: 56px;
     margin: 2px auto 0;
     background-image: url(/resources/switch.png{{{ns}}});
-    background-size: auto 100%;
+    background-size: auto 56px;   /* 128x64 = 2 frames -> 1 step */
     cursor: pointer;
 }
 
@@ -181,7 +188,7 @@
     width: 48px;
     height: 48px;
     background-image: url(/resources/footswitch.png{{{ns}}});
-    background-size: auto 100%;
+    background-size: auto 48px;   /* 128x64 = 2 frames -> 1 step */
     cursor: pointer;
 }
 

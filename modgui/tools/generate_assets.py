@@ -84,21 +84,22 @@ def make_knob_strip(frames=49, size=64):
 
 
 def draw_switch_frame(draw, x0, size, on):
-    """Rocker-style switch in a size x size frame starting at x0
-    (supersampled coordinates)."""
+    """Slide switch travelling left-to-right in a size x size frame starting at
+    x0 (supersampled coordinates). Off sits left, on sits right: for the tone
+    stack position that reads Pre on the left and Post on the right, i.e. in
+    signal-chain order."""
     s = size * SS
-    pad = int(s * 0.14)
-    box = [x0 + pad, pad + int(s * 0.18), x0 + s - pad, s - pad - int(s * 0.18)]
-    draw.rounded_rectangle(box, radius=int(s * 0.10), fill=KNOB_RING)
-    inner = int(s * 0.045)
-    lever_h = (box[3] - box[1] - 2 * inner) // 2
-    if on:
-        lever = [box[0] + inner, box[1] + inner, box[2] - inner, box[1] + inner + lever_h]
-        color = AMBER
-    else:
-        lever = [box[0] + inner, box[3] - inner - lever_h, box[2] - inner, box[3] - inner]
-        color = (90, 92, 98)
-    draw.rounded_rectangle(lever, radius=int(s * 0.06), fill=color)
+    track_h = int(s * 0.42)
+    pad_x = int(s * 0.08)
+    top = (s - track_h) // 2
+    track = [x0 + pad_x, top, x0 + s - pad_x, top + track_h]
+    draw.rounded_rectangle(track, radius=track_h // 2, fill=KNOB_RING)
+
+    inner = int(s * 0.05)
+    knob_d = track_h - 2 * inner
+    knob_x = track[2] - inner - knob_d if on else track[0] + inner
+    color = AMBER if on else (150, 152, 158)
+    draw.ellipse([knob_x, top + inner, knob_x + knob_d, top + inner + knob_d], fill=color)
 
 
 def draw_footswitch_frame(draw, x0, size, pressed):
