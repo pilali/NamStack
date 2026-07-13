@@ -34,6 +34,8 @@ public:
         ac30,         // Vox AC30 top boost
         svt,          // Ampeg SVT
         slo,          // Soldano SLO-100
+        hiwatt,       // Hiwatt DR103 (Custom 100). Appended: the model index
+                      // is a saved parameter value, inserting would remap it.
         numModels
     };
 
