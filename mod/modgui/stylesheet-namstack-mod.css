@@ -202,16 +202,9 @@
 }
 
 /* --------------------------------------------------------- audio jacks */
-/* Generated from the audio port lists mod-ui provides
-   (effect.ports.audio.*), so the symbols always match the plugin's real
-   ports: audio_in, audio_out_l, audio_out_r. */
-.namstackmod{{{cns}}} .ns-jack-in,
-.namstackmod{{{cns}}} .ns-jack-out {
-    position: absolute;
-    width: 30px;
-    height: 60px;
-}
-
-.namstackmod{{{cns}}} .ns-jack-audio_in     { left: -15px;  top: 170px; }
-.namstackmod{{{cns}}} .ns-jack-audio_out_l  { right: -15px; top: 130px; }
-.namstackmod{{{cns}}} .ns-jack-audio_out_r  { right: -15px; top: 210px; }
+/* Intentionally unstyled: the template uses the standard .mod-pedal-input /
+   .mod-pedal-output markup, which mod-ui's own pedals.css lays out (input on
+   the left, outputs on the right) from the effect.ports.audio.* lists. Styling
+   them here -- and in particular reusing the mod-audio-input / mod-audio-output
+   classes, which dashboard.css reserves for the pedalboard's hardware jacks --
+   is what previously flipped the jacks and hid the input. */

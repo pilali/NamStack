@@ -126,12 +126,25 @@
     <div class="ns-led" mod-role="bypass-light"></div>
     <div class="ns-footswitch" mod-role="bypass"></div>
 
-    {{#effect.ports.audio.input}}
-    <div class="ns-jack-in ns-jack-{{symbol}} mod-audio-input" title="{{name}}"
-         mod-role="input-audio-port" mod-port-symbol="{{symbol}}"></div>
-    {{/effect.ports.audio.input}}
-    {{#effect.ports.audio.output}}
-    <div class="ns-jack-out ns-jack-{{symbol}} mod-audio-output" title="{{name}}"
-         mod-role="output-audio-port" mod-port-symbol="{{symbol}}"></div>
-    {{/effect.ports.audio.output}}
+    <!-- Audio jacks: mod-ui lays these out itself from the .mod-pedal-input /
+         .mod-pedal-output wrappers. Do NOT put mod-audio-input / mod-audio-output
+         on them: those classes belong to the pedalboard's hardware jacks and
+         dashboard.css pins them (output left, input right), which flips a pedal's
+         jacks and hides its input. -->
+    <div class="mod-pedal-input">
+        {{#effect.ports.audio.input}}
+        <div class="mod-input mod-input-disconnected" title="{{name}}"
+             mod-role="input-audio-port" mod-port-symbol="{{symbol}}">
+            <div class="mod-pedal-input-image"></div>
+        </div>
+        {{/effect.ports.audio.input}}
+    </div>
+    <div class="mod-pedal-output">
+        {{#effect.ports.audio.output}}
+        <div class="mod-output mod-output-disconnected" title="{{name}}"
+             mod-role="output-audio-port" mod-port-symbol="{{symbol}}">
+            <div class="mod-pedal-output-image"></div>
+        </div>
+        {{/effect.ports.audio.output}}
+    </div>
 </div>

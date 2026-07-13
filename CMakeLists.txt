@@ -193,26 +193,39 @@ if(NAMSTACK_BUILD_MOD_LV2)
         target_link_options(namstack_mod PRIVATE -Wl,--exclude-libs,ALL)
     endif()
 
-    # assemble the LV2 bundle next to the binary
+    # Assemble the LV2 bundle next to the binary. This is driven by a stamp file
+    # that DEPENDS on the data files rather than by a POST_BUILD command on
+    # namstack_mod: POST_BUILD only fires when the .so itself is relinked, so
+    # editing a .ttl or a modgui asset would otherwise leave a stale bundle.
     set(MOD_BUNDLE_DIR ${CMAKE_BINARY_DIR}/mod_artefacts/namstack-mod.lv2)
-    add_custom_command(TARGET namstack_mod POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-            ${CMAKE_CURRENT_SOURCE_DIR}/mod/lv2/manifest.ttl
-            ${CMAKE_CURRENT_SOURCE_DIR}/mod/lv2/namstack.ttl
-            ${CMAKE_CURRENT_SOURCE_DIR}/mod/lv2/modgui.ttl
-            ${MOD_BUNDLE_DIR}/
+
+    set(MOD_TTL_FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/mod/lv2/manifest.ttl
+        ${CMAKE_CURRENT_SOURCE_DIR}/mod/lv2/namstack.ttl
+        ${CMAKE_CURRENT_SOURCE_DIR}/mod/lv2/modgui.ttl)
+
+    set(MOD_GUI_FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/modgui/resources/knob.png
+        ${CMAKE_CURRENT_SOURCE_DIR}/modgui/resources/switch.png
+        ${CMAKE_CURRENT_SOURCE_DIR}/modgui/resources/footswitch.png
+        ${CMAKE_CURRENT_SOURCE_DIR}/modgui/resources/thumbnail-namstack.png
+        ${CMAKE_CURRENT_SOURCE_DIR}/modgui/resources/screenshot-namstack-mod.png
+        ${CMAKE_CURRENT_SOURCE_DIR}/mod/modgui/icon-namstack-mod.html
+        ${CMAKE_CURRENT_SOURCE_DIR}/mod/modgui/stylesheet-namstack-mod.css)
+
+    add_custom_command(
+        OUTPUT ${CMAKE_BINARY_DIR}/namstack-mod-bundle.stamp
         COMMAND ${CMAKE_COMMAND} -E make_directory ${MOD_BUNDLE_DIR}/modgui
-        COMMAND ${CMAKE_COMMAND} -E copy
-            ${CMAKE_CURRENT_SOURCE_DIR}/modgui/resources/knob.png
-            ${CMAKE_CURRENT_SOURCE_DIR}/modgui/resources/switch.png
-            ${CMAKE_CURRENT_SOURCE_DIR}/modgui/resources/footswitch.png
-            ${CMAKE_CURRENT_SOURCE_DIR}/modgui/resources/thumbnail-namstack.png
-            ${CMAKE_CURRENT_SOURCE_DIR}/modgui/resources/screenshot-namstack-mod.png
-            ${CMAKE_CURRENT_SOURCE_DIR}/mod/modgui/icon-namstack-mod.html
-            ${CMAKE_CURRENT_SOURCE_DIR}/mod/modgui/stylesheet-namstack-mod.css
-            ${MOD_BUNDLE_DIR}/modgui/
+        COMMAND ${CMAKE_COMMAND} -E copy ${MOD_TTL_FILES} ${MOD_BUNDLE_DIR}/
+        COMMAND ${CMAKE_COMMAND} -E copy ${MOD_GUI_FILES} ${MOD_BUNDLE_DIR}/modgui/
+        COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_BINARY_DIR}/namstack-mod-bundle.stamp
+        DEPENDS ${MOD_TTL_FILES} ${MOD_GUI_FILES}
         COMMENT "Assembling namstack-mod.lv2 bundle"
         VERBATIM)
+
+    add_custom_target(namstack_mod_bundle ALL
+        DEPENDS ${CMAKE_BINARY_DIR}/namstack-mod-bundle.stamp)
+    add_dependencies(namstack_mod_bundle namstack_mod)
 
     install(DIRECTORY ${MOD_BUNDLE_DIR}
         DESTINATION lib/lv2
