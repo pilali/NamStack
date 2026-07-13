@@ -68,16 +68,49 @@ Boogie Mark** (Mark IIC+ / III / IV), à curseurs verticaux :
 |---|---|---|---|---|
 | **80 Hz** | **240 Hz** | **750 Hz** | **2200 Hz** | **6600 Hz** |
 
-Course de **±12 dB** par bande. Les centres sont espacés d'un facteur ~3, soit
-environ 1,585 octave ; la relation usuelle des égaliseurs graphiques
-`Q = 2^(N/2) / (2^N − 1)` fixe donc **Q ≈ 0,87**. Chaque bande est un biquad
-« peaking » (Robert Bristow-Johnson), les cinq étant montés en série.
+Course de **±12 dB** par bande.
 
-> Le circuit réel est un réseau passif **interactif** : les bandes se tirent
-> dessus et l'ensemble perd du niveau quand on l'engage — c'est précisément ce
-> qui donne son caractère au réglage « en V ». La cascade de filtres
-> indépendants implémentée ici est l'approximation standard que décrivent les
-> fréquences documentées ; elle ne reproduit pas cette interaction.
+Ce n'est **pas** une cascade de filtres indépendants, mais un modèle du *circuit*
+que ces égaliseurs utilisent réellement : un **ampli-op unique entouré d'un
+gyrateur par bande** (un LC série simulé). L'interaction entre les bandes fait
+tout le caractère de l'engin — la reproduire était l'objectif.
+
+**Topologie.** Le potentiomètre de chaque bande est monté *en travers* de
+l'ampli, de l'entrée vers la sortie ; son curseur rejoint le nœud sommateur `S`
+à travers une branche résonante `Zᵢ(s) = Rs + sL + 1/(sC)` accordée sur le
+centre de la bande. Hors résonance, `Zᵢ` est grande et la bande ne fait rien ; à
+la résonance elle devient petite et le curseur injecte du courant dans `S` —
+prélevé du côté entrée (**boost**) ou du côté sortie, donc en contre-réaction
+(**cut**). En écrivant le générateur de Thévenin du curseur et la somme des
+courants en `S` (masse virtuelle), la réponse vient en forme close :
+
+```
+H(s) = − [ 1/Rin + Σᵢ (1−kᵢ)·Yᵢ(s) ] / [ 1/Rf + Σᵢ kᵢ·Yᵢ(s) ]
+
+Yᵢ(s) = 1 / ( kᵢ(1−kᵢ)·Rp + Rs + sLᵢ + 1/(sCᵢ) )
+```
+
+`kᵢ` est la position du curseur : 0 = boost maxi, ½ = neutre, 1 = cut maxi.
+**Chaque bande figure au numérateur *et* au dénominateur de la même fraction**,
+et ce seul fait produit tout ce que la cascade ne pouvait pas donner :
+
+| | mesuré |
+|---|---|
+| Les bandes **interagissent** : deux boosts voisins ne s'additionnent pas | deux bandes à +12 dB → **+8,8 dB** entre elles, là où la somme ferait +13,5 |
+| Le **Q est proportionnel**, pas constant (la résistance de Thévenin `k(1−k)Rp` est maximale au neutre et s'annule aux extrêmes) | la bande passe de **4,5 octaves** à +3 dB à **1,7 octave** à +12 dB |
+| **Engager l'EQ déplace le niveau** — c'est ce qui fait sonner le « V » | réglage `+12/+6/−12/+6/+12` → le creux ne descend qu'à **−9 dB**, remonté par ses voisines, et les extrêmes montent à **+13,7 dB** |
+| Curseurs au neutre : **exactement plat** | déviation **0,000000000 dB** de 20 Hz à 20 kHz |
+
+La discrétisation **préserve la topologie** : chaque branche est intégrée à la
+règle des trapèzes et s'écrit « conductance instantanée + terme d'état », ce qui
+permet de résoudre le nœud sommateur directement à chaque échantillon — sans
+approximation de boucle sans retard ni recherche de racines. Coût mesuré :
+**0,2 % d'un cœur** de Raspberry Pi 5.
+
+Le dB inscrit sur un curseur est ce que fait cette bande **les quatre autres au
+neutre** (les branches voisines chargent le nœud même centrées, ce dont le
+calibrage tient compte). Dès que plusieurs curseurs bougent, ils se tirent
+dessus — c'est tout l'intérêt.
 
 Il possède lui aussi un **on/off** et une option **Pre/Post** indépendante de
 celle du tone stack.

@@ -91,6 +91,18 @@
     color: #8c8e94;
 }
 
+/* Enumeration readouts (tone-stack model, the two Pre/Post switches). Their
+   scale-point labels are longer than the 88px cell -- "Fender Bassman 5F6-A" --
+   so keep them on one line and let them ellipsize rather than wrap and shove
+   the row apart. */
+.namstackmod{{{cns}}} .ns-value-enum {
+    font-size: 9px;
+    color: #f0a030;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* ------------------------------------------------------------ widgets */
 /* background-size MUST carry the frame height in px, not a percentage: mod-ui
    derives the film-strip frame count from it with

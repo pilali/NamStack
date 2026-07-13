@@ -10,20 +10,48 @@ namespace nsdsp
 //
 //     80 Hz - 240 Hz - 750 Hz - 2200 Hz - 6600 Hz
 //
-// with a travel of about +/-12 dB. The bands sit a little over 1.5 octaves
-// apart (each centre is roughly 3x the previous one), which fixes the width of
-// each band: for a bandwidth of N octaves the usual graphic-EQ relation
+// with a travel of about +/-12 dB.
 //
-//     Q = 2^(N/2) / (2^N - 1)
+// This is not a cascade of independent peaking filters. It is a model of the
+// circuit those EQs actually use -- a single op-amp with one gyrator (a
+// simulated series LC) per band -- because the interaction between the bands is
+// the whole character of the thing.
 //
-// gives Q ~= 0.87 for N = log2(3) ~= 1.585. Each band is a Robert Bristow-
-// Johnson peaking biquad and the five are run in series.
+// Topology. Each band has a slider pot of resistance Rp wired across the
+// amplifier, from the input node to the output node; its wiper feeds the
+// op-amp's summing node S through a series-resonant branch Z_i(s) = Rs + sL +
+// 1/(sC), tuned to the band's centre. Rin and Rf set the flat gain. Off
+// resonance Z_i is large and the band does nothing; at resonance it is small, so
+// the wiper injects current into S -- drawn from the input end of the pot
+// (boost) or from the output end (feedback, so cut).
 //
-// The real circuit is a passive interacting network whose bands pull on each
-// other and which also loses level as it is engaged (this is why the classic
-// "V" setting sounds the way it does). A cascade of independent peaking filters
-// is the standard approximation and is what the documented slider frequencies
-// describe; it does not reproduce that interaction.
+// Writing the wiper's Thevenin source and summing the currents at S (a virtual
+// earth) gives the response in closed form:
+//
+//     H(s) = - [ 1/Rin + SUM_i (1-k_i) Y_i(s) ] / [ 1/Rf + SUM_i k_i Y_i(s) ]
+//
+//     Y_i(s) = 1 / ( k_i(1-k_i)Rp + Rs + sL_i + 1/(sC_i) )
+//
+// with k_i the wiper position: 0 = full boost, 1/2 = flat, 1 = full cut. Every
+// band appears in both the numerator and the denominator of the same fraction,
+// and that single fact is what the cascade could not reproduce:
+//
+//   * the bands interact -- two adjacent boosts do not add, they compound
+//     through the shared summing node;
+//   * the Q is proportional, not constant: the pot's Thevenin resistance
+//     k(1-k)Rp is largest at the centre and vanishes at the extremes, so a band
+//     is broad and gentle near flat and tightens as it is pushed;
+//   * engaging the EQ shifts the overall level, which is why the classic "V"
+//     sounds the way it does.
+//
+// With every slider centred, H(s) = -Rf/Rin exactly, whatever the bands are
+// doing -- the model is bit-flat when it should be. The output is negated so
+// that flat is +1 rather than the circuit's inverting -1.
+//
+// The discretisation is topology-preserving: each branch is integrated with the
+// trapezoidal rule and written as an instantaneous conductance plus a state
+// term, which lets the summing node be solved directly each sample. There is no
+// delay-free-loop approximation and no root finding.
 class GraphicEQ
 {
 public:
@@ -38,27 +66,45 @@ public:
     void prepare (double sampleRate);
     void reset();
 
-    // gainsDb: numBands values, each in [-maxGainDb, +maxGainDb]
+    // gainsDb: numBands values, each in [-maxGainDb, +maxGainDb]. The value is
+    // the band's own setting, i.e. what it would do on its own; once several
+    // sliders leave the centre they pull on each other, exactly as the circuit
+    // does, so the response is not simply the sum of them.
     void setGains (const float* gainsDb);
 
     void processBlock (float* data, int numSamples);
 
 private:
-    struct Biquad
-    {
-        // b0 .. a2 with a0 normalised to 1
-        double b0 = 1, b1 = 0, b2 = 0;
-        double a1 = 0, a2 = 0;
-
-        // direct form II transposed state
-        double z1 = 0, z2 = 0;
-    };
-
     void updateCoefficients();
+
+    // Wiper position that puts this band at `gainDb` with the other four
+    // centred, found by bisecting the closed-form response (monotonic in k).
+    static double wiperForGain (double gainDb, int band);
+
+    struct Band
+    {
+        // component values, fixed once the sample rate is known
+        double gL = 0;  // T / (2L)
+        double gC = 0;  // T / (2C)
+
+        // wiper, and what it implies for the branch (recomputed on a gain change)
+        double k = 0.5;
+        double G = 0;   // instantaneous conductance of the branch
+        double a1 = 0;  // state weights: S = a1*prevI + G*prevV - 2G*prevVc
+
+        // trapezoidal state
+        double prevI = 0, prevV = 0, prevVc = 0;
+    };
 
     double fs = 48000.0;
     std::array<float, numBands> gains {}; // dB, zero-initialised = flat
-    std::array<Biquad, numBands> bands {};
+    std::array<Band, numBands> bands {};
+
+    // node sums, recomputed with the wipers
+    double yNum = 0; // 1/Rin + SUM G_i (1 - k_i)
+    double yDen = 0; // 1/Rf   + SUM G_i k_i
+    double invYDen = 0;
+
     bool dirty = true;
 };
 

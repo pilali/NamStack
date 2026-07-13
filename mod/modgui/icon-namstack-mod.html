@@ -13,10 +13,14 @@
             <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="in_gain"></div>
             <div class="ns-value" mod-role="input-control-value" mod-port-symbol="in_gain"></div>
         </div>
+        <!-- ts_model is a 9-way enumeration (Bypass, Bassman, Twin Reverb, ...).
+             It stays a knob so it can be addressed to a hardware pot, but it needs
+             its readout: without one, nothing on the pedal says which amp is
+             selected. -->
         <div class="ns-ctrl">
             <p>STACK</p>
             <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="ts_model"></div>
-            <div class="ns-value"></div>
+            <div class="ns-value ns-value-enum" mod-role="input-control-value" mod-port-symbol="ts_model"></div>
         </div>
         <div class="ns-ctrl">
             <p>STACK ON</p>
@@ -26,7 +30,7 @@
         <div class="ns-ctrl">
             <p>PRE/POST</p>
             <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="ts_position"></div>
-            <div class="ns-value"></div>
+            <div class="ns-value ns-value-enum" mod-role="input-control-value" mod-port-symbol="ts_position"></div>
         </div>
         <div class="ns-ctrl">
             <p>BASS</p>
@@ -120,7 +124,7 @@
         <div class="ns-ctrl">
             <p>EQ PRE/POST</p>
             <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="geq_position"></div>
-            <div class="ns-value"></div>
+            <div class="ns-value ns-value-enum" mod-role="input-control-value" mod-port-symbol="geq_position"></div>
         </div>
         <div class="ns-ctrl-fader">
             <p>80</p>

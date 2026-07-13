@@ -60,16 +60,33 @@ jobs:
       # plugin built from the same libraries (neural-amp-modeler-lv2 also vendors
       # NeuralAmpModelerCore), which aborts the host with
       # "Config parser already registered for: SlimmableContainer". Guard it.
-      - name: Check the bundle exports lv2_descriptor only
+      # Checked as an invariant rather than an exact symbol list: depending on
+      # the linker version a shared object also exports its own linker-defined
+      # symbols (__bss_start, _edata, _end), which are harmless. What must never
+      # appear is a C++ symbol -- that is what gets interposed -- or an
+      # STB_GNU_UNIQUE one, which glibc unifies across DSOs even under RTLD_LOCAL
+      # and which is what actually aborted the host.
+      - name: Check the bundle exports no C++ symbols
         run: |
           so=build/mod_artefacts/namstack-mod.lv2/namstack.so
-          exported=$(${{ matrix.tool_prefix }}nm -D --defined-only "$so" | awk '{print $3}' | sort)
-          echo "exported symbols:"
-          echo "$exported"
-          if [ "$exported" != "lv2_descriptor" ]; then
-            echo "::error::the plugin exports more than lv2_descriptor -- it will interpose other plugins in the host"
+          nm=${{ matrix.tool_prefix }}nm
+
+          echo "defined dynamic symbols:"
+          $nm -D --defined-only "$so"
+
+          if ! $nm -D --defined-only "$so" | grep -qw lv2_descriptor; then
+            echo "::error::lv2_descriptor is not exported -- the host cannot load this plugin"
             exit 1
           fi
+
+          mangled=$($nm -D --defined-only "$so" | grep -c ' _Z' || true)
+          unique=$($nm -D "$so" | awk '$2 == "u"' | wc -l)
+
+          if [ "$mangled" -ne 0 ] || [ "$unique" -ne 0 ]; then
+            echo "::error::exports $mangled C++ and $unique GNU_UNIQUE symbols -- these interpose other plugins in the host (see the visibility notes in the README)"
+            exit 1
+          fi
+          echo "OK: lv2_descriptor exported, no C++ and no GNU_UNIQUE symbols"
 
       - uses: actions/upload-artifact@v4
         with:
