@@ -196,6 +196,13 @@
     color: #101114;
 }
 
+/* the "clear this slot" entry, set apart from the actual files */
+.namstackmod{{{cns}}} .ns-file-list div.ns-file-none {
+    font-style: italic;
+    color: #8c8e94;
+    border-bottom: 1px solid #3a3c42;
+}
+
 /* ---------------------------------------------------- bypass footswitch */
 .namstackmod{{{cns}}} .ns-footswitch {
     position: absolute;

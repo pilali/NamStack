@@ -614,9 +614,13 @@ void run (LV2_Handle instance, uint32_t nSamples)
                                  self->uris.patch_value, &value,
                                  0);
 
+            // An empty path is not rejected: it is how the host asks for a slot
+            // to be cleared. It travels down the same worker path as a load and
+            // comes back with a null object, which kWorkApply installs -- freeing
+            // whatever was loaded and emptying filePaths[slot].
             if (property == nullptr || property->type != self->uris.atom_URID
                 || value == nullptr || value->type != self->uris.atom_Path
-                || value->size == 0 || value->size >= kMaxFileName)
+                || value->size >= kMaxFileName)
                 continue;
 
             const auto propertyUrid = reinterpret_cast<const LV2_Atom_URID*> (property)->body;

@@ -1,0 +1,127 @@
+name: build
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------- MOD LV2
+  # The JUCE-free LV2 for MOD devices and pi-Stomp. It has no dependency beyond
+  # libc/libstdc++, so the aarch64 build is a plain cross-compile: no sysroot.
+  mod-lv2:
+    name: MOD LV2 (${{ matrix.arch }})
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            cmake_args: ''
+            tool_prefix: ''
+          - arch: aarch64
+            cmake_args: >-
+              -DCMAKE_SYSTEM_NAME=Linux
+              -DCMAKE_SYSTEM_PROCESSOR=aarch64
+              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc
+              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
+            tool_prefix: aarch64-linux-gnu-
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install the aarch64 cross toolchain
+        if: matrix.arch == 'aarch64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-aarch64-linux-gnu
+
+      - name: Configure
+        run: >-
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DNAMSTACK_BUILD_JUCE=OFF
+          -DNAMSTACK_BUILD_MOD_LV2=ON
+          ${{ matrix.cmake_args }}
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      # An LV2 plugin must export lv2_descriptor and nothing else. Exporting the
+      # nam:: symbols lets the dynamic linker interpose them against another
+      # plugin built from the same libraries (neural-amp-modeler-lv2 also vendors
+      # NeuralAmpModelerCore), which aborts the host with
+      # "Config parser already registered for: SlimmableContainer". Guard it.
+      - name: Check the bundle exports lv2_descriptor only
+        run: |
+          so=build/mod_artefacts/namstack-mod.lv2/namstack.so
+          exported=$(${{ matrix.tool_prefix }}nm -D --defined-only "$so" | awk '{print $3}' | sort)
+          echo "exported symbols:"
+          echo "$exported"
+          if [ "$exported" != "lv2_descriptor" ]; then
+            echo "::error::the plugin exports more than lv2_descriptor -- it will interpose other plugins in the host"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: namstack-mod.lv2-linux-${{ matrix.arch }}
+          path: build/mod_artefacts/namstack-mod.lv2/
+
+  # ------------------------------------------------------------ JUCE formats
+  juce:
+    name: JUCE (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            os: ubuntu-22.04
+          - name: windows
+            os: windows-2022
+          - name: macos
+            os: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install the JUCE Linux dependencies
+        if: matrix.name == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev libx11-dev libxext-dev libxrandr-dev \
+            libxinerama-dev libxcursor-dev libfreetype-dev \
+            libglu1-mesa-dev mesa-common-dev pkg-config
+
+      # The MOD LV2 is covered by the job above, and its MODULE target is
+      # meaningless on Windows/macOS, so only the JUCE formats are built here.
+      - name: Configure
+        run: >-
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DNAMSTACK_BUILD_JUCE=ON
+          -DNAMSTACK_BUILD_MOD_LV2=OFF
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NamStack-${{ matrix.name }}
+          path: |
+            build/NamStack_artefacts/**/VST3/**
+            build/NamStack_artefacts/**/LV2/**
+            build/NamStack_artefacts/**/Standalone/**
+          if-no-files-found: error

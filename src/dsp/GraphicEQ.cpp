@@ -8,6 +8,10 @@ namespace nsdsp
 
 namespace
 {
+// MSVC does not define M_PI without _USE_MATH_DEFINES; the rest of this code
+// base carries its own constant, so do the same here.
+constexpr double kPi = 3.14159265358979323846;
+
 // Bandwidth of one band, in octaves: the centres are spaced by a factor of
 // about 3, i.e. log2(3) octaves apart.
 constexpr double kBandwidthOctaves = 1.5849625007211562; // log2(3)
@@ -63,7 +67,7 @@ void GraphicEQ::updateCoefficients()
         // Robert Bristow-Johnson peaking EQ. A is the square root of the
         // linear gain, so that the response reaches exactly `gain` dB at f0.
         const double A = std::pow (10.0, gains[(size_t) i] / 40.0);
-        const double w0 = 2.0 * M_PI * (double) frequencies[(size_t) i] / fs;
+        const double w0 = 2.0 * kPi * (double) frequencies[(size_t) i] / fs;
         const double cosw0 = std::cos (w0);
         const double alpha = std::sin (w0) / (2.0 * kQ);
 

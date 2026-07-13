@@ -159,6 +159,11 @@
                     -- none --
                 </div>
                 <div class="mod-enumerated-list ns-file-list">
+                    <!-- Clears the slot. mod-ui binds every [mod-role=enumeration-option]
+                         in the template, so this static entry sends an empty path, which
+                         the plugin treats as "unload". It is also the entry that lights up
+                         again once the slot is empty, since its value matches. -->
+                    <div mod-role="enumeration-option" mod-parameter-value="" class="ns-file-none">-- none --</div>
                     {{#files}}
                     <div mod-role="enumeration-option" mod-parameter-value="{{fullname}}">{{basename}}</div>
                     {{/files}}

@@ -99,6 +99,12 @@ Lorsque les deux se retrouvent **du même côté**, l'égaliseur graphique passe
 - Les IR stéréo sont supportées ; les IR mono sont dupliquées sur les deux
   canaux avant panoramique. Chargement sans interruption audio (échange en
   arrière-plan par `juce::dsp::Convolution`).
+- **Chaque slot peut être vidé**, et l'on peut revenir à **zéro IR** : dans
+  mod-ui, l'entrée *« -- none -- »* en tête de chaque liste de fichiers efface
+  le slot (elle envoie un chemin vide, que le plugin traite comme un
+  déchargement) ; dans l'éditeur JUCE, c'est le bouton **X** de la ligne. Quand
+  plus aucun slot n'est actif, le mixeur d'IR laisse passer le signal tel quel —
+  pas de silence.
 
 ### Doubleur
 Effet « doubler » de fin de chaîne dans l'esprit de celui des suites
@@ -133,6 +139,25 @@ Binaires produits :
 
 Dépendances Linux : `libasound2-dev libx11-dev libxext-dev libxrandr-dev
 libxinerama-dev libxcursor-dev libfreetype-dev`.
+
+### Intégration continue
+
+`.github/workflows/build.yml` compile tout à chaque push :
+
+| Job | Cible | Artefact |
+|---|---|---|
+| `mod-lv2 (x86_64)` | LV2 MOD, natif | `namstack-mod.lv2-linux-x86_64` |
+| `mod-lv2 (aarch64)` | LV2 MOD, compilation croisée | `namstack-mod.lv2-linux-aarch64` |
+| `juce (linux)` | VST3 / LV2 / Standalone | `NamStack-linux` |
+| `juce (windows)` | VST3 / Standalone (MSVC) | `NamStack-windows` |
+| `juce (macos)` | VST3 / LV2 / Standalone | `NamStack-macos` |
+
+Le LV2 MOD étant sans dépendance hors libc/libstdc++ (pas de JUCE), la variante
+aarch64 est une **simple compilation croisée** (`g++-aarch64-linux-gnu`), sans
+sysroot : l'artefact se dépose tel quel dans `~/.lv2/` d'un Raspberry Pi.
+
+La CI **échoue si le `.so` exporte autre chose que `lv2_descriptor`** — c'est le
+garde-fou contre la régression décrite plus bas, qui faisait planter mod-host.
 
 ## MOD Audio (Dwarf, Duo, DuoX)
 
