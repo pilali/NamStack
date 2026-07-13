@@ -32,7 +32,12 @@ NAMSTACK_TARGET_OPT += -fno-unroll-loops
 NAMSTACK_TARGET_OPT += -ftree-vectorize -fmove-loop-invariants -fexceptions -funsafe-math-optimizations
 NAMSTACK_TARGET_OPT += -fdata-sections -ffunction-sections -pipe -fno-math-errno -fno-trapping-math
 NAMSTACK_TARGET_OPT += -falign-functions=16 -falign-loops=16
-NAMSTACK_TARGET_OPT += -fsingle-precision-constant
+# aarch64 defaults to unsigned char, but the vendored WDL (AudioDSPTools
+# resampler) requires a signed char, like on x86.
+NAMSTACK_TARGET_OPT += -fsigned-char
+# NOTE: -fsingle-precision-constant (used by some MOD packages) is NOT
+# compatible with this codebase (breaks the vendored WDL/Lanczos resampler
+# and std::clamp/std::max template deduction) — do not add it.
 NAMSTACK_TARGET_OPT += -pthread
 
 ifndef BR2_SKIP_LTO

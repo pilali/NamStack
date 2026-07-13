@@ -162,8 +162,10 @@ bool NeuralModel::isSlimmable() const noexcept
 
 void NeuralModel::setSlimmableSize (double size01)
 {
+    // clamp<double> explicitly: -fsingle-precision-constant (used by MOD
+    // device builds) turns plain literals into floats.
     if (auto* slimmable = dynamic_cast<nam::SlimmableModel*> (namModel.get()))
-        slimmable->SetSlimmableSize (std::clamp (size01, 0.0, 1.0));
+        slimmable->SetSlimmableSize (std::clamp<double> (size01, 0.0, 1.0));
 }
 
 void NeuralModel::processAtModelRate (float** in, float** out, int numSamples)

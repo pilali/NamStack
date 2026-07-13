@@ -134,6 +134,77 @@ La recette `mod-plugin-builder/namstack/namstack.mk` :
 Conseils CPU pour le Dwarf : privilégiez les modèles NAM « feather/nano » ou
 les modèles AIDA-X LSTM légers ; le tone stack, le mixeur d'IR (jusqu'à
 4 slots) et le doubleur sont peu coûteux en comparaison du modèle neuronal.
+Sur les modèles **A2 slimmables**, le potentiomètre **Quality** est le levier
+CPU le plus efficace.
+
+### Compilation croisée avec un GCC récent (hors mod-plugin-builder)
+
+La toolchain de mod-plugin-builder est ancienne (GCC ~9). Certaines
+optimisations n'ont d'intérêt qu'avec un auto-vectoriseur moderne — par
+exemple, dans NeuralAudio (le moteur du plugin *neural-amp-modeler-lv2*),
+`ENABLE_MULTIFRAME_8X8_CONVOLUTION` n'est activée par défaut qu'à partir de
+**GCC 15 / Clang 21**. Ce n'est pas une exigence du langage (le code est du
+C++17 standard, on peut forcer l'option avec n'importe quel compilateur) mais
+un seuil de *performance* : en dessous, le noyau manuel est souvent plus lent
+que la voie Eigen qu'il remplace.
+
+Pour bénéficier d'un compilateur récent **sans toucher à MOD OS ni à la
+toolchain MPB**, la méthode sûre est : *GCC récent + sysroot MPB + runtime
+C++ statique*. Les deux règles ABI qui rendent cela sûr :
+
+1. **glibc** : le binaire ne doit pas exiger de symboles glibc plus récents
+   que ceux du périphérique → on compile avec `--sysroot` pointant sur le
+   *staging* de mod-plugin-builder (la glibc du Dwarf). Un GCC récent
+   fonctionne très bien contre une vieille glibc en sysroot.
+2. **libstdc++/libgcc** : celles du Dwarf sont trop vieilles pour un GCC
+   récent → on les lie **statiquement** dans le `.so`
+   (`-static-libstdc++ -static-libgcc`), sans ré-exporter leurs symboles
+   (`-Wl,--exclude-libs,ALL`). L'ABI LV2 étant du C pur, embarquer une
+   libstdc++ privée dans le plugin est sans danger pour mod-host.
+
+Le dépôt fournit l'outillage complet :
+
+- `cmake/aarch64-moddwarf.cmake` — fichier toolchain CMake (Cortex-A35,
+  drapeaux d'optimisation MOD, sysroot, runtime statique) ;
+- `scripts/build-moddwarf-external.sh` — build de bout en bout + audits
+  (version glibc maximale requise par le binaire, absence de dépendance
+  dynamique à libstdc++) + déploiement optionnel.
+
+```bash
+# 1. Préparer une fois le sysroot du Dwarf avec mod-plugin-builder :
+#    ./bootstrap.sh moddwarf   (crée ~/mod-workdir/moddwarf/staging)
+
+# 2. Installer un cross-GCC aarch64 récent (crosstool-NG, Bootlin,
+#    ARM GNU toolchain…) et vérifier son préfixe (ex: aarch64-none-linux-gnu-)
+
+# 3. Compiler :
+CROSS_PREFIX=aarch64-none-linux-gnu- \
+MOD_SYSROOT=$HOME/mod-workdir/moddwarf/staging \
+./scripts/build-moddwarf-external.sh
+
+# 4. (optionnel) déployer directement sur le Dwarf :
+MOD_DEVICE=root@192.168.51.1 ... ./scripts/build-moddwarf-external.sh
+# puis redémarrer l'appareil pour que mod-ui rescanne les plugins
+```
+
+Le script vérifie automatiquement que le `.so` produit ne requiert pas de
+version glibc supérieure à celle du sysroot et que libstdc++ n'apparaît pas
+dans ses dépendances dynamiques (`objdump -T` / `-p`).
+
+La même procédure s'applique au plugin *neural-amp-modeler-lv2* officiel si
+vous voulez y forcer `-DENABLE_MULTIFRAME_8X8_CONVOLUTION=ON` avec un GCC 15 :
+compilez-le hors MPB avec ce type de toolchain file, en ajoutant l'option à
+la ligne CMake. Avec le GCC 9 de MPB, forcer l'option compile aussi — mais
+mesurez la charge CPU sur l'appareil avant de l'adopter, la valeur par défaut
+(OFF sous GCC < 15) reflète un vrai risque de régression.
+
+Notes de portage utiles (découvertes en validant la cross-compilation) :
+
+- `-fsigned-char` est requis sur aarch64 (le `char` y est non signé par
+  défaut, ce que le code WDL embarqué par NAM core refuse) ;
+- `-fsingle-precision-constant` est **incompatible** avec cette base de code
+  (il casse le resampler Lanczos/WDL et la déduction de templates) — ne
+  l'ajoutez pas aux drapeaux, même s'il figure dans d'autres recettes MOD.
 
 ### modgui
 
