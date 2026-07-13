@@ -350,18 +350,18 @@ def make_screenshot_mod():
         draw.text(((bx + 6) * SS, (top + 16 + 11) * SS), "-- none --", font=value_font,
                   fill=AMBER, anchor="lm")
 
-    # row 1 (CSS .ns-row-model: top 60, left 286) after the model selector
-    # (CSS .ns-file[#model]: left 22, top 84, 232px box)
-    draw_file_select(22, 84, "NEURAL MODEL", box_w=232)
+    # row 1 (CSS .ns-row-model: top 60, left 460) after the model selector
+    # (CSS .ns-file[#model]: left 220, top 84, 232px box); centred as a group
+    draw_file_select(220, 84, "NEURAL MODEL", box_w=232)
     draw_row(["QUALITY", "INPUT", "PARAM 1", "PARAM 2", "OUTPUT"], set(),
-             {0: "1.00", 1: "0.0 dB", 2: "0.50", 3: "0.50", 4: "0.0 dB"}, 60, x0=286)
+             {0: "1.00", 1: "0.0 dB", 2: "0.50", 3: "0.50", 4: "0.0 dB"}, 60, x0=460)
 
-    # row 2, all the EQ on one line (CSS .ns-row-eq: top 164): the tone stack,
-    # then the graphic EQ switches and faders
+    # row 2, all the EQ on one line (CSS .ns-row-eq: top 164, left 28): the
+    # tone stack, then the graphic EQ switches and faders
     draw_row(["STACK", "STACK ON", "PRE/POST", "BASS", "MIDDLE", "TREBLE",
               "EQ ON", "EQ PRE/POST"], {1, 2, 6, 7},
-             {3: "0.50", 4: "0.50", 5: "0.50"}, 164)
-    fader_x0 = ROW_X + 8 * BLOCK_W
+             {3: "0.50", 4: "0.50", 5: "0.50"}, 164, x0=28)
+    fader_x0 = 28 + 8 * BLOCK_W
     for i, label in enumerate(EQ_BANDS):
         cx = (fader_x0 + i * FADER_BLOCK_W + FADER_BLOCK_W / 2) * SS
         draw.text((cx, (164 + LABEL_H / 2) * SS), label, font=label_font, fill=TEXT, anchor="mm")
@@ -373,15 +373,15 @@ def make_screenshot_mod():
                   font=value_font, fill=TEXT_DIM, anchor="mm")
 
     # row 3, IR mixer: file selector above each slot's on / level / pan
-    # (CSS .ns-file[#ir*]: 264px pitch from left 22, top 312; .ns-row-ir: top 354)
+    # (CSS .ns-file[#ir*]: 264px pitch from left 32, top 312; .ns-row-ir: top 354)
     for i in range(4):
-        draw_file_select(22 + i * 264, 312, "IR %d" % (i + 1), box_w=232)
+        draw_file_select(32 + i * 264, 312, "IR %d" % (i + 1), box_w=232)
     draw_row(["ON", "LEVEL", "PAN"] * 4, {0, 3, 6, 9},
-             {i: ("0.0 dB" if i % 3 == 1 else "0.00") for i in range(12) if i % 3}, 354)
+             {i: ("0.0 dB" if i % 3 == 1 else "0.00") for i in range(12) if i % 3}, 354, x0=32)
 
-    # row 4, doubler (CSS .ns-row-dbl: top 458)
-    draw_row(["DOUBLER", "MIX", "TIME", "WIDTH"], {0},
-             {1: "0.50", 2: "18 ms", 3: "1.00"}, 458)
+    # row 4, the whole doubler (CSS .ns-row-dbl: top 458, left 296)
+    draw_row(["DOUBLER", "MIX", "TIME", "DETUNE", "HUMANIZE", "WIDTH"], {0},
+             {1: "0.50", 2: "18 ms", 3: "9.0 ct", 4: "0.30", 5: "1.00"}, 458, x0=296)
 
     # footswitch + led (CSS: fsw 1040/480 48px, led 1057/456 14px)
     fx, fy = 1064, 504

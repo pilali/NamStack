@@ -65,12 +65,18 @@
     display: -webkit-box; display: -moz-box; display: flex;
 }
 
-/* Row 1 starts on the fourth grid column (22 + 3*88), after the model file
-   selector. Row 3's controls sit under the IR selectors (top 312). */
-.namstackmod{{{cns}}} .ns-row-model { top: 60px; left: 286px; }
-.namstackmod{{{cns}}} .ns-row-eq    { top: 164px; }
-.namstackmod{{{cns}}} .ns-row-ir    { top: 354px; }
-.namstackmod{{{cns}}} .ns-row-dbl   { top: 458px; }
+/* Each line is centred in the 1120px pedal; the lefts are precomputed from
+   the row widths so the screenshot generator can mirror them exactly.
+     row 1: 240 (model selector) + 5*88 = 680  -> (1120-680)/2  = 220
+     row 2: 8*88 + 5*72          = 1064        -> (1120-1064)/2 = 28
+     row 3: 4 slots * 264        = 1056        -> (1120-1056)/2 = 32
+     row 4: 6*88                 = 528         -> (1120-528)/2  = 296
+   Row 1's knobs start after the selector (220 + 240); row 3's controls sit
+   under the IR selectors (top 312). */
+.namstackmod{{{cns}}} .ns-row-model { top: 60px; left: 460px; }
+.namstackmod{{{cns}}} .ns-row-eq    { top: 164px; left: 28px; }
+.namstackmod{{{cns}}} .ns-row-ir    { top: 354px; left: 32px; }
+.namstackmod{{{cns}}} .ns-row-dbl   { top: 458px; left: 296px; }
 
 .namstackmod{{{cns}}} .ns-ctrl {
     width: 88px;
@@ -165,15 +171,15 @@
 
 /* the neural model, top row, centred against the knobs beside it */
 .namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#model"] {
-    left: 22px;
+    left: 220px;
     top: 84px;
 }
 
 /* one selector above each IR slot's on / level / pan (264px slot pitch) */
-.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir1"] { left: 22px;  top: 312px; }
-.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir2"] { left: 286px; top: 312px; }
-.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir3"] { left: 550px; top: 312px; }
-.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir4"] { left: 814px; top: 312px; }
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir1"] { left: 32px;  top: 312px; }
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir2"] { left: 296px; top: 312px; }
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir3"] { left: 560px; top: 312px; }
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir4"] { left: 824px; top: 312px; }
 
 .namstackmod{{{cns}}} .ns-file p {
     margin: 0 0 2px;

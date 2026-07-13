@@ -147,6 +147,14 @@
             lv2:name "Doubler Time" ;
         ] , [
             lv2:index 33 ;
+            lv2:symbol "dbl_detune" ;
+            lv2:name "Doubler Detune" ;
+        ] , [
+            lv2:index 34 ;
+            lv2:symbol "dbl_humanize" ;
+            lv2:name "Doubler Humanize" ;
+        ] , [
+            lv2:index 35 ;
             lv2:symbol "dbl_width" ;
             lv2:name "Doubler Width" ;
         ] ;
