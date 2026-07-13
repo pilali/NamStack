@@ -1,0 +1,217 @@
+/* NamStack (MOD variant) modgui — layout mirrored by
+   modgui/tools/generate_assets.py (make_screenshot_mod) */
+
+.namstackmod{{{cns}}} {
+    position: absolute;
+    width: 840px;
+    height: 400px;
+    background: linear-gradient(#26282e, #181a1e);
+    border: 2px solid #0c0d0f;
+    border-radius: 12px;
+    color: #d2d2d6;
+    font-family: "DejaVu Sans", Arial, sans-serif;
+}
+
+.namstackmod{{{cns}}} .ns-drag-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: move;
+}
+
+/* ------------------------------------------------------------- header */
+.namstackmod{{{cns}}} .ns-header h1 {
+    position: absolute;
+    top: 6px;
+    left: 24px;
+    margin: 0;
+    font-size: 26px;
+    font-weight: bold;
+    color: #f0a030;
+    pointer-events: none;
+}
+
+.namstackmod{{{cns}}} .ns-subtitle {
+    position: absolute;
+    top: 26px;
+    left: 190px;
+    font-size: 11px;
+    color: #8c8e94;
+    pointer-events: none;
+}
+
+.namstackmod{{{cns}}} .ns-brand {
+    position: absolute;
+    top: 26px;
+    right: 24px;
+    font-size: 11px;
+    color: #8c8e94;
+    pointer-events: none;
+}
+
+/* --------------------------------------------------------------- rows */
+.namstackmod{{{cns}}} .ns-row {
+    position: absolute;
+    left: 22px;
+    display: -webkit-box; display: -moz-box; display: flex;
+}
+
+.namstackmod{{{cns}}} .ns-row-amp { top: 60px; }
+.namstackmod{{{cns}}} .ns-row-fx  { top: 182px; }
+
+.namstackmod{{{cns}}} .ns-ctrl {
+    width: 88px;
+    text-align: center;
+}
+
+.namstackmod{{{cns}}} .ns-ctrl p {
+    margin: 0;
+    height: 16px;
+    line-height: 16px;
+    font-size: 10px;
+    font-weight: bold;
+    color: #d2d2d6;
+    pointer-events: none;
+}
+
+.namstackmod{{{cns}}} .ns-value {
+    margin-top: 2px;
+    height: 16px;
+    line-height: 16px;
+    font-size: 10px;
+    color: #8c8e94;
+}
+
+/* ------------------------------------------------------------ widgets */
+.namstackmod{{{cns}}} .ns-knob {
+    width: 56px;
+    height: 56px;
+    margin: 2px auto 0;
+    background-image: url(/resources/knob.png{{{ns}}});
+    background-size: auto 100%;
+    cursor: pointer;
+}
+
+.namstackmod{{{cns}}} .ns-switch {
+    width: 56px;
+    height: 56px;
+    margin: 2px auto 0;
+    background-image: url(/resources/switch.png{{{ns}}});
+    background-size: auto 100%;
+    cursor: pointer;
+}
+
+/* ------------------------------------------------------- file selectors */
+.namstackmod{{{cns}}} .ns-files {
+    position: absolute;
+    left: 22px;
+    top: 306px;
+    width: 700px;
+    display: -webkit-box; display: -moz-box; display: flex;
+}
+
+.namstackmod{{{cns}}} .ns-file {
+    width: 140px;
+    margin-right: 8px;
+}
+
+.namstackmod{{{cns}}} .ns-file p {
+    margin: 0 0 2px;
+    height: 14px;
+    line-height: 14px;
+    font-size: 10px;
+    font-weight: bold;
+    color: #d2d2d6;
+    pointer-events: none;
+}
+
+.namstackmod{{{cns}}} .ns-file-select {
+    position: relative;
+    width: 132px;
+    height: 22px;
+    background-color: #101114;
+    border: 1px solid #3a3c42;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.namstackmod{{{cns}}} .ns-file-selected {
+    height: 22px;
+    line-height: 22px;
+    padding: 0 6px;
+    font-size: 10px;
+    color: #f0a030;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.namstackmod{{{cns}}} .ns-file-list {
+    display: none;
+    position: absolute;
+    left: -1px;
+    top: 22px;
+    width: 132px;
+    max-height: 180px;
+    overflow-y: auto;
+    background-color: #101114;
+    border: 1px solid #3a3c42;
+    border-radius: 0 0 4px 4px;
+    z-index: 100;
+}
+
+.namstackmod{{{cns}}} .ns-file-list div {
+    padding: 3px 6px;
+    font-size: 10px;
+    color: #d2d2d6;
+}
+
+.namstackmod{{{cns}}} .ns-file-list div:hover {
+    background-color: #f0a030;
+    color: #101114;
+}
+
+/* ---------------------------------------------------- bypass footswitch */
+.namstackmod{{{cns}}} .ns-footswitch {
+    position: absolute;
+    left: 762px;
+    top: 316px;
+    width: 48px;
+    height: 48px;
+    background-image: url(/resources/footswitch.png{{{ns}}});
+    background-size: auto 100%;
+    cursor: pointer;
+}
+
+.namstackmod{{{cns}}} .ns-led {
+    position: absolute;
+    left: 779px;
+    top: 292px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: #3a2c14;
+    border: 1px solid #0c0d0f;
+}
+
+.namstackmod{{{cns}}} .ns-led.on {
+    background-color: #f0a030;
+    box-shadow: 0 0 8px #f0a030;
+}
+
+/* --------------------------------------------------------- audio jacks */
+/* Generated from the audio port lists mod-ui provides
+   (effect.ports.audio.*), so the symbols always match the plugin's real
+   ports: audio_in, audio_out_l, audio_out_r. */
+.namstackmod{{{cns}}} .ns-jack-in,
+.namstackmod{{{cns}}} .ns-jack-out {
+    position: absolute;
+    width: 30px;
+    height: 60px;
+}
+
+.namstackmod{{{cns}}} .ns-jack-audio_in     { left: -15px;  top: 170px; }
+.namstackmod{{{cns}}} .ns-jack-audio_out_l  { right: -15px; top: 130px; }
+.namstackmod{{{cns}}} .ns-jack-audio_out_r  { right: -15px; top: 210px; }

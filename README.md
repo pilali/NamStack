@@ -79,36 +79,74 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ```
 
-Binaires produits dans `build/NamStack_artefacts/Release/` :
-- `LV2/NamStack.lv2/` — copier dans `~/.lv2/`
-- `VST3/NamStack.vst3/` — copier dans `~/.vst3/`
-- `Standalone/NamStack`
+Binaires produits :
+- `build/NamStack_artefacts/Release/LV2/NamStack.lv2/` — copier dans `~/.lv2/`
+- `build/NamStack_artefacts/Release/VST3/NamStack.vst3/` — copier dans `~/.vst3/`
+- `build/NamStack_artefacts/Release/Standalone/NamStack`
+- `build/mod_artefacts/namstack-mod.lv2/` — LV2 natif (MOD / headless)
 
 Dépendances Linux : `libasound2-dev libx11-dev libxext-dev libxrandr-dev
 libxinerama-dev libxcursor-dev libfreetype-dev`.
 
-## MOD (modgui)
+## MOD Audio (Dwarf, Duo, DuoX)
 
-Le bundle LV2 embarque une interface web **modgui** pour
-[mod-ui](https://github.com/mod-audio/mod-ui) (MOD Audio) :
+Le dépôt contient **deux plugins LV2** :
 
-- `modgui/` : template (`icon-namstack.html`), feuille de style, sprites de
-  potentiomètres/interrupteurs, `screenshot-namstack.png` (840×360) et
-  `thumbnail-namstack.png` (256×64), régénérables avec
-  `python3 modgui/tools/generate_assets.py` (Pillow requis).
-- Les **jacks audio du template sont générés par mod-ui lui-même** : le
-  template itère sur `effect.ports.audio.input` / `effect.ports.audio.output`
-  fournis par mod-ui, si bien que les symboles de ports (`audio_in_1`,
-  `audio_out_1`, `audio_out_2`) correspondent toujours à ceux du `dsp.ttl`
-  généré par JUCE.
-- JUCE 8 expose les paramètres LV2 en propriétés `patch:writable` (et non en
-  ControlPorts) ; les contrôles du modgui utilisent donc
-  `mod-role="input-parameter"` avec l'URI du paramètre
-  (`urn:pilali:NamStack:<id>`), supporté par mod-ui.
-- Limitation : le chargement des fichiers de modèles et d'IR passe par
-  l'état du plugin (éditeur desktop), pas par des paramètres `atom:Path` —
-  sur un appareil MOD, les fichiers ne peuvent pas être choisis depuis le
-  modgui.
+| | JUCE LV2 (`NamStack.lv2`) | LV2 natif MOD (`namstack-mod.lv2`) |
+|---|---|---|
+| URI | `urn:pilali:NamStack` | `urn:pilali:NamStackMOD` |
+| Cible | desktop (GUI X11) | **périphériques MOD** et desktop headless |
+| Paramètres | `patch:writable` (JUCE 8) | **ControlPorts** (adressables sur les potards matériels) |
+| Fichiers | état du plugin (éditeur) | **`patch:Set` / `atom:Path`** : modèle + 4 IR chargés depuis mod-ui, avec `mod:fileTypes` (`nammodel`, `aidadspmodel`, `cabsim`, `ir`…) |
+| Convolution | juce::dsp::Convolution | moteur UPOLS maison (pffft), **latence zéro** quand bloc hôte = partition (cas MOD : 128) |
+| Chargement | thread de message | **worker LV2** (échange sans blocage du thread audio) |
+
+La variante MOD suit l'architecture de
+[neural-amp-modeler-lv2](https://github.com/mikeoliphant/neural-amp-modeler-lv2)
+(worker + patch + state avec `mapPath`, notifications `patch:Set` sur le port
+notify, restauration des chemins avec la pedalboard).
+
+### Compilation avec mod-plugin-builder (MOD Dwarf)
+
+```bash
+# dans votre clone de mod-plugin-builder :
+cp -r /chemin/vers/NamStack/mod-plugin-builder/namstack plugins/package/
+./build moddwarf namstack
+```
+
+La recette `mod-plugin-builder/namstack/namstack.mk` :
+
+- construit uniquement le LV2 natif (`-DNAMSTACK_BUILD_JUCE=OFF`, pas de X11) ;
+- applique les drapeaux d'optimisation éprouvés sur Cortex-A35 (mêmes que le
+  paquet `neural-amp-modeler-lv2` officiel : `-ftree-vectorize`,
+  `-funsafe-math-optimizations`, `-fno-math-errno`, LTO,
+  `-fsingle-precision-constant`, `EIGEN_DONT_PARALLELIZE`…) ;
+- épingle la longueur maximale des IR (`NAMSTACK_MAX_IR_SAMPLES`, 8192 par
+  défaut ≈ 170 ms @ 48 kHz — descendez à 4096 pour économiser du CPU avec de
+  gros modèles NAM sur le Dwarf).
+
+Conseils CPU pour le Dwarf : privilégiez les modèles NAM « feather/nano » ou
+les modèles AIDA-X LSTM légers ; le tone stack, le mixeur d'IR (jusqu'à
+4 slots) et le doubleur sont peu coûteux en comparaison du modèle neuronal.
+
+### modgui
+
+Chaque bundle embarque une interface web pour
+[mod-ui](https://github.com/mod-audio/mod-ui) :
+
+- Les **jacks audio des templates sont générés par mod-ui lui-même** : les
+  templates itèrent sur `effect.ports.audio.input` /
+  `effect.ports.audio.output` fournis par mod-ui au rendu, si bien que les
+  symboles des ports correspondent toujours au TTL du plugin (`audio_in`,
+  `audio_out_l`, `audio_out_r` pour la variante MOD).
+- Variante MOD : potentiomètres en `mod-role="input-control-port"` +
+  **5 sélecteurs de fichiers** (`mod-widget="custom-select-path"`, listes de
+  fichiers fournies par mod-ui via `effect.parameters`).
+- Bundle JUCE : contrôles en `mod-role="input-parameter"` (paramètres
+  `patch:writable` de JUCE 8).
+- Assets (sprites film-strip, screenshots 840×360 / 840×400, thumbnail
+  256×64) régénérables avec `python3 modgui/tools/generate_assets.py`
+  (Pillow requis).
 
 ## Notes
 

@@ -7,3 +7,6 @@
 [submodule "external/JUCE"]
 	path = external/JUCE
 	url = https://github.com/juce-framework/JUCE.git
+[submodule "external/lv2"]
+	path = external/lv2
+	url = https://github.com/lv2/lv2.git

@@ -16,33 +16,56 @@ inline constexpr double PI = 3.14159265358979323846;
 
 #include <dsp/ResamplingContainer/ResamplingContainer.h>
 
+#include <algorithm>
+#include <cmath>
+#include <filesystem>
 #include <fstream>
 
 namespace nsdsp
 {
 
-NeuralModel::NeuralModel() = default;
+// Defined in NamArchitectures.cpp; calling it from here (a translation unit
+// that is always linked) keeps the NAM architecture registrars alive.
+const void* getNamArchitectureAnchor (int index);
+
+namespace
+{
+std::string toLower (std::string s)
+{
+    std::transform (s.begin(), s.end(), s.begin(), [] (unsigned char c) { return (char) std::tolower (c); });
+    return s;
+}
+} // namespace
+
+NeuralModel::NeuralModel()
+{
+    (void) getNamArchitectureAnchor (0);
+}
+
 NeuralModel::~NeuralModel() = default;
 
-bool NeuralModel::loadFile (const juce::File& file, juce::String& errorMessage)
+bool NeuralModel::loadFile (const std::string& path, std::string& errorMessage)
 {
-    if (! file.existsAsFile())
+    const std::filesystem::path fsPath (path);
+
+    std::error_code ec;
+    if (! std::filesystem::is_regular_file (fsPath, ec))
     {
-        errorMessage = "File not found: " + file.getFullPathName();
+        errorMessage = "File not found: " + path;
         return false;
     }
 
-    const auto extension = file.getFileExtension().toLowerCase();
+    const auto extension = toLower (fsPath.extension().string());
 
     if (extension == ".nam")
     {
         try
         {
-            namModel = nam::get_dsp (std::filesystem::path (file.getFullPathName().toStdString()));
+            namModel = nam::get_dsp (fsPath);
         }
         catch (const std::exception& e)
         {
-            errorMessage = "Failed to load NAM model: " + juce::String (e.what());
+            errorMessage = std::string ("Failed to load NAM model: ") + e.what();
             return false;
         }
 
@@ -62,7 +85,7 @@ bool NeuralModel::loadFile (const juce::File& file, juce::String& errorMessage)
     {
         try
         {
-            std::ifstream jsonStream (file.getFullPathName().toStdString(), std::ifstream::binary);
+            std::ifstream jsonStream (fsPath, std::ifstream::binary);
             nlohmann::json modelJson;
             jsonStream >> modelJson;
 
@@ -79,7 +102,7 @@ bool NeuralModel::loadFile (const juce::File& file, juce::String& errorMessage)
         }
         catch (const std::exception& e)
         {
-            errorMessage = "Failed to load RTNeural/AIDA-X model: " + juce::String (e.what());
+            errorMessage = std::string ("Failed to load RTNeural/AIDA-X model: ") + e.what();
             return false;
         }
 
@@ -92,7 +115,7 @@ bool NeuralModel::loadFile (const juce::File& file, juce::String& errorMessage)
         rtInputSize = rtModel->getInSize();
         if (rtInputSize < 1 || rtInputSize > 8)
         {
-            errorMessage = "Unsupported model input size: " + juce::String (rtInputSize);
+            errorMessage = "Unsupported model input size: " + std::to_string (rtInputSize);
             rtModel.reset();
             return false;
         }
@@ -100,7 +123,7 @@ bool NeuralModel::loadFile (const juce::File& file, juce::String& errorMessage)
         type = Type::rtNeural;
     }
 
-    name = file.getFileNameWithoutExtension();
+    name = fsPath.stem().string();
     return true;
 }
 
@@ -110,7 +133,7 @@ void NeuralModel::prepare (double sampleRate, int maxBlockSize)
     needsResampling = std::abs (hostSampleRate - modelSampleRate) > 1.0;
 
     const auto modelBlockSize = needsResampling
-        ? juce::jmax (16, (int) std::ceil ((double) maxBlockSize * modelSampleRate / hostSampleRate) + 64)
+        ? std::max (16, (int) std::ceil ((double) maxBlockSize * modelSampleRate / hostSampleRate) + 64)
         : maxBlockSize;
 
     if (type == Type::nam && namModel != nullptr)

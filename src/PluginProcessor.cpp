@@ -237,7 +237,7 @@ void NamStackAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
                        pDblHumanize->load(),
                        pDblWidth->load(),
                        pDblMix->load());
-    doubler.process (stereoBuffer, numSamples);
+    doubler.process (stereoBuffer.getWritePointer (0), stereoBuffer.getWritePointer (1), numSamples);
 
     // --------------------------------------------------------- output gain
     outputGain.setTargetValue (juce::Decibels::decibelsToGain (pOutGain->load()));
@@ -275,8 +275,12 @@ bool NamStackAudioProcessor::loadModelFile (const juce::File& file, juce::String
 {
     auto newModel = std::make_unique<nsdsp::NeuralModel>();
 
-    if (! newModel->loadFile (file, errorMessage))
+    std::string error;
+    if (! newModel->loadFile (file.getFullPathName().toStdString(), error))
+    {
+        errorMessage = error;
         return false;
+    }
 
     if (prepared)
         newModel->prepare (currentSampleRate, currentBlockSize);
@@ -310,7 +314,7 @@ void NamStackAudioProcessor::clearModel()
 juce::String NamStackAudioProcessor::getModelName() const
 {
     const juce::SpinLock::ScopedLockType sl (const_cast<juce::SpinLock&> (modelLock));
-    return model != nullptr ? model->getName() : juce::String();
+    return model != nullptr ? juce::String (model->getName()) : juce::String();
 }
 
 juce::String NamStackAudioProcessor::getModelInfo() const

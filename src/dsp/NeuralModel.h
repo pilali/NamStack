@@ -1,9 +1,8 @@
 #pragma once
 
-#include <juce_core/juce_core.h>
-
 #include <atomic>
 #include <memory>
+#include <string>
 
 namespace nam
 {
@@ -29,6 +28,9 @@ namespace nsdsp
 // AIDA-X / RTNeural (.aidax / .json) model through RTNeural. When the model's
 // native sample rate differs from the host's, processing is wrapped in a
 // Lanczos resampling container.
+//
+// This class is deliberately JUCE-free so that it can be shared between the
+// JUCE plugin and the plain LV2 (MOD) build.
 class NeuralModel
 {
 public:
@@ -42,9 +44,12 @@ public:
     NeuralModel();
     ~NeuralModel();
 
+    NeuralModel (const NeuralModel&) = delete;
+    NeuralModel& operator= (const NeuralModel&) = delete;
+
     // Call on a non-realtime thread. Returns false and fills errorMessage on
     // failure. prepare() must be called before the model is processed.
-    bool loadFile (const juce::File& file, juce::String& errorMessage);
+    bool loadFile (const std::string& path, std::string& errorMessage);
 
     void prepare (double sampleRate, int maxBlockSize);
 
@@ -53,7 +58,7 @@ public:
 
     Type getType() const noexcept { return type; }
     bool isLoaded() const noexcept { return type != Type::none; }
-    juce::String getName() const { return name; }
+    const std::string& getName() const noexcept { return name; }
     double getModelSampleRate() const noexcept { return modelSampleRate; }
     int getLatencySamples() const noexcept;
 
@@ -74,7 +79,7 @@ public:
 
 private:
     Type type = Type::none;
-    juce::String name;
+    std::string name;
     double modelSampleRate = 48000.0;
     double hostSampleRate = 48000.0;
 
@@ -87,8 +92,6 @@ private:
     bool needsResampling = false;
 
     void processAtModelRate (float** in, float** out, int numSamples);
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NeuralModel)
 };
 
 } // namespace nsdsp

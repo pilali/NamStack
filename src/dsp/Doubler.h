@@ -1,7 +1,6 @@
 #pragma once
 
-#include <juce_audio_basics/juce_audio_basics.h>
-
+#include <cstdint>
 #include <vector>
 
 namespace nsdsp
@@ -13,6 +12,8 @@ namespace nsdsp
 // a short, slowly drifting time, panned hard left / hard right, and blended
 // with the dry signal. The "humanize" control adds slow random drift to the
 // delay times, mimicking the timing sloppiness of a real doubled take.
+//
+// JUCE-free so that it can be shared with the plain LV2 (MOD) build.
 class Doubler
 {
 public:
@@ -21,7 +22,8 @@ public:
 
     void setParams (bool enabled, float timeMs, float detuneCents, float humanize, float width, float mix);
 
-    void process (juce::AudioBuffer<float>& stereo, int numSamples);
+    // Stereo in-place processing.
+    void process (float* left, float* right, int numSamples);
 
 private:
     struct Voice
@@ -41,8 +43,18 @@ private:
         float panLeft = 1.0f, panRight = 0.0f;
     };
 
+    // minimal one-pole parameter smoother
+    struct Smoother
+    {
+        void reset (double sampleRate, double timeSeconds);
+        void setTarget (float t) noexcept { target = t; }
+        float next() noexcept { return current += coeff * (target - current); }
+        float current = 0.0f, target = 0.0f, coeff = 1.0f;
+    };
+
     float readInterpolated (double delaySamples) const;
     void updateVoiceDrift (Voice& voice);
+    float nextRandom() noexcept; // uniform in [-1, 1]
 
     double fs = 48000.0;
     std::vector<float> buffer;
@@ -52,11 +64,11 @@ private:
     float lpCoeff = 0.5f;
 
     Voice voices[2];
-    juce::Random random;
+    uint32_t rngState = 0x12345678u;
 
     bool enabled = false;
     float timeMs = 18.0f, detuneCents = 9.0f, humanize = 0.3f, width = 1.0f, mix = 0.5f;
-    juce::SmoothedValue<float> dryGain, wetGain;
+    Smoother dryGain, wetGain;
 };
 
 } // namespace nsdsp

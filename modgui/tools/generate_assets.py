@@ -213,6 +213,68 @@ def make_screenshot():
     img.save(os.path.join(OUT, "screenshot-namstack.png"))
 
 
+def make_screenshot_mod():
+    """Screenshot of the MOD (plain LV2) variant: same two knob rows plus a
+    bottom row of file selectors. Mirrors mod/modgui/stylesheet-namstack-mod.css."""
+    global PEDAL_H
+    saved_h = PEDAL_H
+    PEDAL_H = 400
+    img, draw = draw_pedal()
+
+    title_font = font(26 * SS, bold=True)
+    sub_font = font(11 * SS)
+    label_font = font(10 * SS, bold=True)
+    value_font = font(10 * SS)
+
+    draw.text((24 * SS, 12 * SS), "NamStack", font=title_font, fill=AMBER)
+    draw.text((190 * SS, 26 * SS), "NAM · AIDA-X · TONE STACK · IR MIXER · DOUBLER",
+              font=sub_font, fill=TEXT_DIM)
+    draw.text((PEDAL_W * SS - 24 * SS, 26 * SS), "Pilali", font=sub_font, fill=TEXT_DIM, anchor="ra")
+
+    def draw_row(labels, switches, values, top):
+        for i, label in enumerate(labels):
+            bx = ROW_X + i * BLOCK_W
+            cx = (bx + BLOCK_W / 2) * SS
+            draw.text((cx, (top + LABEL_H / 2) * SS), label, font=label_font, fill=TEXT, anchor="mm")
+            ky = top + LABEL_H + 2
+            if i in switches:
+                sw = Image.new("RGBA", (KNOB * SS, KNOB * SS), (0, 0, 0, 0))
+                draw_switch_frame(ImageDraw.Draw(sw), 0, KNOB, on=False)
+                img.alpha_composite(sw, (int(cx - KNOB / 2 * SS), ky * SS))
+            else:
+                draw_knob_frame(draw, cx, (ky + KNOB / 2) * SS, (KNOB / 2 - 2) * SS, 0.5)
+            if i in values:
+                draw.text((cx, (ky + KNOB + 2 + VALUE_H / 2) * SS), values[i],
+                          font=value_font, fill=TEXT_DIM, anchor="mm")
+
+    # rows sit slightly higher than on the desktop screenshot (CSS: 60 / 182)
+    draw_row(ROW1, ROW1_SWITCH, ROW1_VALUES, 60)
+    draw_row(ROW2, ROW2_SWITCH, ROW2_VALUES, 182)
+
+    # file selector bar (CSS .ns-files: left 22, top 306, 140px pitch, 132x22 boxes)
+    file_labels = ["NEURAL MODEL", "IR 1", "IR 2", "IR 3", "IR 4"]
+    for i, label in enumerate(file_labels):
+        bx = 22 + i * 148
+        draw.text((bx * SS, (306 + 7) * SS), label, font=label_font, fill=TEXT, anchor="lm")
+        box = [bx * SS, 322 * SS, (bx + 132) * SS, (322 + 22) * SS]
+        draw.rounded_rectangle(box, radius=4 * SS, fill=(16, 17, 20), outline=(58, 60, 66), width=SS)
+        draw.text(((bx + 6) * SS, (322 + 11) * SS), "-- none --", font=value_font,
+                  fill=AMBER, anchor="lm")
+
+    # footswitch + led (CSS: fsw 762/316 48px, led 779/292 14px)
+    fx, fy = 786, 340
+    draw.ellipse([(fx - 24) * SS, (fy - 24) * SS, (fx + 24) * SS, (fy + 24) * SS],
+                 fill=(60, 62, 68), outline=PANEL_EDGE, width=2 * SS)
+    draw.ellipse([(fx - 16) * SS, (fy - 16) * SS, (fx + 16) * SS, (fy + 16) * SS],
+                 fill=(84, 86, 94))
+    draw.ellipse([(fx - 7) * SS, (299 - 7) * SS, (fx + 7) * SS, (299 + 7) * SS],
+                 fill=AMBER, outline=AMBER_DIM, width=SS)
+
+    img = img.resize((PEDAL_W, PEDAL_H), Image.LANCZOS)
+    img.save(os.path.join(OUT, "screenshot-namstack-mod.png"))
+    PEDAL_H = saved_h
+
+
 def make_thumbnail():
     w, h = 256, 64
     img = Image.new("RGBA", (w * SS, h * SS), (0, 0, 0, 0))
@@ -242,5 +304,6 @@ if __name__ == "__main__":
     make_switch_strip()
     make_footswitch_strip()
     make_screenshot()
+    make_screenshot_mod()
     make_thumbnail()
     print("assets written to", os.path.abspath(OUT))
