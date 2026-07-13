@@ -73,6 +73,17 @@ add_library(namstack_core STATIC
 target_include_directories(namstack_core PUBLIC src)
 target_link_libraries(namstack_core PUBLIC nam_core RTNeural)
 
+# AudioDSPTools' ResamplingContainer.h (vendored by NeuralAmpModelerCore) has a
+# member alias `using LanczosResampler = LanczosResampler<...>` that shadows the
+# class of the same name. GCC 11+ makes this a hard error governed by
+# -fpermissive; the in-source `#pragma GCC diagnostic ignored "-Wchanges-meaning"`
+# only silences it on GCC 14+ (where that flag exists). Downgrade it to a warning
+# for the single translation unit that includes the header, on GCC only.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set_source_files_properties(src/dsp/NeuralModel.cpp
+        PROPERTIES COMPILE_OPTIONS -fpermissive)
+endif()
+
 # --------------------------------------------------------------- JUCE plugin
 if(NAMSTACK_BUILD_JUCE)
     add_subdirectory(external/JUCE)

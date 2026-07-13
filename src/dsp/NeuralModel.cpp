@@ -16,8 +16,11 @@ inline constexpr double PI = 3.14159265358979323846;
 #endif
 
 // The `using LanczosResampler = LanczosResampler<...>` alias inside
-// ResamplingContainer.h changes the meaning of the name within class scope,
-// which GCC 14+ rejects by default (-Wchanges-meaning became a permerror).
+// ResamplingContainer.h changes the meaning of the name within class scope.
+// GCC 11+ makes this a hard error governed by -fpermissive; the pragma below
+// only silences it on GCC 14+, where -Wchanges-meaning exists. For GCC 11-13
+// the CMakeLists compiles this TU with -fpermissive (downgrades it to a
+// warning). See CMakeLists.txt (set_source_files_properties on NeuralModel.cpp).
 #if defined(__GNUC__) && ! defined(__clang__)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wpragmas" // older GCC: unknown warning below

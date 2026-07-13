@@ -112,6 +112,47 @@ La variante MOD suit l'architecture de
 (worker + patch + state avec `mapPath`, notifications `patch:Set` sur le port
 notify, restauration des chemins avec la pedalboard).
 
+### Compilation native sur Raspberry Pi (Pi 4 / Pi 5, pi-Stomp…)
+
+Pour faire tourner **uniquement** la variante MOD (`namstack-mod.lv2`, LV2
+headless + modgui) directement sur un Raspberry Pi sous mod-ui, on compile en
+natif en désactivant les formats JUCE (pas de X11 requis) :
+
+```bash
+git clone --recurse-submodules <ce dépôt> NamStack
+cd NamStack        # ou: git submodule update --init --recursive
+
+cmake -B build -DCMAKE_BUILD_TYPE=Release \
+      -DNAMSTACK_BUILD_JUCE=OFF -DNAMSTACK_BUILD_MOD_LV2=ON
+cmake --build build --parallel
+
+# le bundle prêt à déployer :
+cp -r build/mod_artefacts/namstack-mod.lv2 ~/.lv2/
+# puis relancer mod-ui pour qu'il rescanne les plugins
+```
+
+Aucune dépendance X11/JUCE n'est nécessaire dans ce mode ; il suffit d'un
+compilateur C++20 (`build-essential`, `cmake`, `git`).
+
+Vérifier le bundle produit (facultatif, nécessite `lilv-utils`) :
+
+```bash
+LV2_PATH=$PWD/build/mod_artefacts lv2ls        # doit lister urn:pilali:NamStackMOD
+LV2_PATH=$PWD/build/mod_artefacts lv2info urn:pilali:NamStackMOD
+```
+
+**Note toolchain (GCC ≥ 11, donc Debian Bookworm / Raspberry Pi OS actuels).**
+Le header `ResamplingContainer.h` de l'AudioDSPTools embarqué par NAM core
+contient un alias de membre (`using LanczosResampler = LanczosResampler<…>`) qui
+masque la classe homonyme. GCC 11+ en fait une erreur dure gouvernée par
+`-fpermissive`, et le `#pragma GCC diagnostic ignored "-Wchanges-meaning"`
+présent dans le code ne la neutralise qu'à partir de **GCC 14** (le drapeau
+n'existe pas avant). Le `CMakeLists.txt` applique donc `-fpermissive` au seul
+`src/dsp/NeuralModel.cpp` sous GCC — c'est transparent, mais cela explique
+l'avertissement `changes meaning of 'LanczosResampler'` qui subsiste sous
+GCC 11–13 (bénin). Sur la toolchain GCC 9 de mod-plugin-builder, rien de tout
+cela ne se déclenche.
+
 ### Compilation avec mod-plugin-builder (MOD Dwarf)
 
 ```bash
