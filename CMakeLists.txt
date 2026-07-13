@@ -25,6 +25,13 @@ set(NAMSTACK_MAX_IR_SAMPLES 8192 CACHE STRING "Maximum IR length in samples (MOD
 # models still load, but through the slower generic WaveNet implementation.
 option(NAMSTACK_ENABLE_A2_FAST "Enable the NAM A2 fast-path WaveNet implementation" ON)
 
+# On ARM (Raspberry Pi, MOD devices...) plain char is unsigned by default,
+# which the WDL code vendored by NeuralAmpModelerCore rejects with a static
+# assertion. Build everything with signed char, like on x86.
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|aarch64)" AND (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
+    add_compile_options(-fsigned-char)
+endif()
+
 # ------------------------------------------------------------------ RTNeural
 set(RTNEURAL_EIGEN ON CACHE BOOL "" FORCE)
 add_subdirectory(external/RTNeural)

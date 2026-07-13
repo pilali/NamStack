@@ -15,7 +15,20 @@ inline constexpr double PI = 3.14159265358979323846;
 #define DEFAULT_BLOCK_SIZE 512
 #endif
 
+// The `using LanczosResampler = LanczosResampler<...>` alias inside
+// ResamplingContainer.h changes the meaning of the name within class scope,
+// which GCC 14+ rejects by default (-Wchanges-meaning became a permerror).
+#if defined(__GNUC__) && ! defined(__clang__)
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wpragmas" // older GCC: unknown warning below
+  #pragma GCC diagnostic ignored "-Wchanges-meaning"
+#endif
+
 #include <dsp/ResamplingContainer/ResamplingContainer.h>
+
+#if defined(__GNUC__) && ! defined(__clang__)
+  #pragma GCC diagnostic pop
+#endif
 
 #include <algorithm>
 #include <cmath>
