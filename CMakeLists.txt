@@ -32,6 +32,15 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|aarch64)" AND (CMAKE_CXX_COMPILER_ID ST
     add_compile_options(-fsigned-char)
 endif()
 
+# The WDL vendored by NAM core's AudioDSPTools (wdltypes.h, heapbuf.h) includes
+# windows.h, which defines min and max as macros unless told not to. They then
+# eat every std::min / std::max downstream -- std::max( becomes std::( -- and the
+# resampler will not compile:
+#   error C2589: '(': illegal token on right side of '::'
+if(WIN32)
+    add_compile_definitions(NOMINMAX)
+endif()
+
 # An LV2 plugin is dlopen'd into a host that may already have loaded another
 # plugin built from the same libraries -- neural-amp-modeler-lv2, for instance,
 # also vendors NeuralAmpModelerCore. With default visibility both .so files
