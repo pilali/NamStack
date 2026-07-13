@@ -1,17 +1,17 @@
 /* NamStack (MOD variant) modgui — layout mirrored by
    modgui/tools/generate_assets.py (make_screenshot_mod)
 
-   Signal-flow reading order, top to bottom:
+   Signal-flow reading order, top to bottom, every control cell on a 88px grid
+   (left: 22 + k*88) so the columns line up from row to row:
      1. neural model (file selector) + A2 quality, input, params, output
-     2. tone stack
-     3. 5-band graphic EQ
-     4. IR mixer (file selector above each level knob)
-     5. doubler */
+     2. all the EQ on one line: tone stack, then the 5-band graphic EQ
+     3. IR mixer, one 264px slot per IR: file selector above on / level / pan
+     4. doubler */
 
 .namstackmod{{{cns}}} {
     position: absolute;
-    width: 960px;
-    height: 656px;
+    width: 1120px;
+    height: 560px;
     background: linear-gradient(#26282e, #181a1e);
     border: 2px solid #0c0d0f;
     border-radius: 12px;
@@ -65,22 +65,16 @@
     display: -webkit-box; display: -moz-box; display: flex;
 }
 
-/* Row 1 starts after the model file selector (left: 22, width 240). */
-.namstackmod{{{cns}}} .ns-row-model { top: 60px; left: 290px; }
-.namstackmod{{{cns}}} .ns-row-ts    { top: 164px; }
-.namstackmod{{{cns}}} .ns-row-eq    { top: 256px; }
-.namstackmod{{{cns}}} .ns-row-ir    { top: 442px; }
-.namstackmod{{{cns}}} .ns-row-dbl   { top: 548px; }
+/* Row 1 starts on the fourth grid column (22 + 3*88), after the model file
+   selector. Row 3's controls sit under the IR selectors (top 312). */
+.namstackmod{{{cns}}} .ns-row-model { top: 60px; left: 286px; }
+.namstackmod{{{cns}}} .ns-row-eq    { top: 164px; }
+.namstackmod{{{cns}}} .ns-row-ir    { top: 354px; }
+.namstackmod{{{cns}}} .ns-row-dbl   { top: 458px; }
 
 .namstackmod{{{cns}}} .ns-ctrl {
     width: 88px;
     text-align: center;
-}
-
-/* IR level cells share the 148px pitch of the file selectors above them, so
-   each knob lines up under its slot. */
-.namstackmod{{{cns}}} .ns-ctrl-ir {
-    width: 148px;
 }
 
 /* one 5-band graphic-EQ slider cell */
@@ -161,26 +155,25 @@
    layout does not depend on the order mod-ui iterates effect.parameters. */
 .namstackmod{{{cns}}} .ns-file {
     position: absolute;
-    width: 140px;
-}
-
-/* the neural model, top row, wide enough for real model file names */
-.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#model"] {
-    left: 22px;
-    top: 84px;
     width: 240px;
 }
 
-.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#model"] .ns-file-select,
-.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#model"] .ns-file-list {
+.namstackmod{{{cns}}} .ns-file-select,
+.namstackmod{{{cns}}} .ns-file-list {
     width: 232px;
 }
 
-/* one selector above each IR level knob (148px pitch, see .ns-ctrl-ir) */
-.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir1"] { left: 22px;  top: 400px; }
-.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir2"] { left: 170px; top: 400px; }
-.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir3"] { left: 318px; top: 400px; }
-.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir4"] { left: 466px; top: 400px; }
+/* the neural model, top row, centred against the knobs beside it */
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#model"] {
+    left: 22px;
+    top: 84px;
+}
+
+/* one selector above each IR slot's on / level / pan (264px slot pitch) */
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir1"] { left: 22px;  top: 312px; }
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir2"] { left: 286px; top: 312px; }
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir3"] { left: 550px; top: 312px; }
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir4"] { left: 814px; top: 312px; }
 
 .namstackmod{{{cns}}} .ns-file p {
     margin: 0 0 2px;
@@ -194,7 +187,6 @@
 
 .namstackmod{{{cns}}} .ns-file-select {
     position: relative;
-    width: 132px;
     height: 22px;
     background-color: #101114;
     border: 1px solid #3a3c42;
@@ -218,7 +210,6 @@
     position: absolute;
     left: -1px;
     top: 22px;
-    width: 132px;
     max-height: 180px;
     overflow-y: auto;
     background-color: #101114;
@@ -248,8 +239,8 @@
 /* ---------------------------------------------------- bypass footswitch */
 .namstackmod{{{cns}}} .ns-footswitch {
     position: absolute;
-    left: 880px;
-    top: 580px;
+    left: 1040px;
+    top: 480px;
     width: 48px;
     height: 48px;
     background-image: url(/resources/footswitch.png{{{ns}}});
@@ -259,8 +250,8 @@
 
 .namstackmod{{{cns}}} .ns-led {
     position: absolute;
-    left: 897px;
-    top: 556px;
+    left: 1057px;
+    top: 456px;
     width: 14px;
     height: 14px;
     border-radius: 50%;
