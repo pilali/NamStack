@@ -7,12 +7,46 @@
         <span class="ns-brand">Pilali</span>
     </div>
 
-    <div class="ns-row ns-row-amp">
+    <!-- Every control cell sits on a 88px grid (left: 22 + k*88), so the
+         columns line up from row to row. Row 1: the neural model (file
+         selector, positioned here by CSS out of the ns-files loop below) with
+         its A2 quality, then the gain staging: input, the two AIDA
+         conditioning params, output. -->
+    <div class="ns-section ns-section-amp"><span>AMP</span></div>
+    <div class="ns-row ns-row-model">
+        <div class="ns-ctrl">
+            <p>QUALITY</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="quality"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="quality"></div>
+        </div>
         <div class="ns-ctrl">
             <p>INPUT</p>
             <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="in_gain"></div>
             <div class="ns-value" mod-role="input-control-value" mod-port-symbol="in_gain"></div>
         </div>
+        <div class="ns-ctrl">
+            <p>PARAM 1</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="aida_p1"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="aida_p1"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>PARAM 2</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="aida_p2"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="aida_p2"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>OUTPUT</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="out_gain"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="out_gain"></div>
+        </div>
+    </div>
+
+    <!-- Row 2: everything EQ on one line -- the tone stack, then the 5-band
+         graphic EQ (Mesa/Boogie Mark voicing: 80 / 240 / 750 / 2200 / 6600 Hz).
+         Each EQ's Pre/Post picks its side of the neural model; when both land
+         on the same side, the graphic EQ runs after the tone stack. -->
+    <div class="ns-section ns-section-eq"><span>EQ</span></div>
+    <div class="ns-row ns-row-eq">
         <!-- ts_model is a 9-way enumeration (Bypass, Bassman, Twin Reverb, ...).
              It stays a knob so it can be addressed to a hardware pot, but it needs
              its readout: without one, nothing on the pedal says which amp is
@@ -47,75 +81,6 @@
             <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="ts_treble"></div>
             <div class="ns-value" mod-role="input-control-value" mod-port-symbol="ts_treble"></div>
         </div>
-        <div class="ns-ctrl">
-            <p>PARAM 1</p>
-            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="aida_p1"></div>
-            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="aida_p1"></div>
-        </div>
-        <div class="ns-ctrl">
-            <p>PARAM 2</p>
-            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="aida_p2"></div>
-            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="aida_p2"></div>
-        </div>
-        <div class="ns-ctrl">
-            <p>OUTPUT</p>
-            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="out_gain"></div>
-            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="out_gain"></div>
-        </div>
-    </div>
-
-    <div class="ns-row ns-row-fx">
-        <div class="ns-ctrl">
-            <p>IR 1</p>
-            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="ir1_gain"></div>
-            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="ir1_gain"></div>
-        </div>
-        <div class="ns-ctrl">
-            <p>IR 2</p>
-            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="ir2_gain"></div>
-            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="ir2_gain"></div>
-        </div>
-        <div class="ns-ctrl">
-            <p>IR 3</p>
-            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="ir3_gain"></div>
-            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="ir3_gain"></div>
-        </div>
-        <div class="ns-ctrl">
-            <p>IR 4</p>
-            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="ir4_gain"></div>
-            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="ir4_gain"></div>
-        </div>
-        <div class="ns-ctrl">
-            <p>DOUBLER</p>
-            <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="dbl_on"></div>
-            <div class="ns-value"></div>
-        </div>
-        <div class="ns-ctrl">
-            <p>MIX</p>
-            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="dbl_mix"></div>
-            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="dbl_mix"></div>
-        </div>
-        <div class="ns-ctrl">
-            <p>TIME</p>
-            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="dbl_time"></div>
-            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="dbl_time"></div>
-        </div>
-        <div class="ns-ctrl">
-            <p>WIDTH</p>
-            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="dbl_width"></div>
-            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="dbl_width"></div>
-        </div>
-        <div class="ns-ctrl">
-            <p>QUALITY</p>
-            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="quality"></div>
-            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="quality"></div>
-        </div>
-    </div>
-
-    <!-- 5-band graphic EQ, Mesa/Boogie Mark voicing (80 / 240 / 750 / 2200 / 6600 Hz).
-         Its Pre/Post picks which side of the neural model it sits on; when it
-         lands on the same side as the tone stack, it runs after it. -->
-    <div class="ns-row ns-row-eq">
         <div class="ns-ctrl">
             <p>EQ ON</p>
             <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="geq_on"></div>
@@ -153,10 +118,118 @@
         </div>
     </div>
 
+    <!-- Row 3: the IR mixer, one full slot per 264px (3 grid cells): the
+         slot's file selector (from the ns-files loop below, positioned by CSS)
+         above its on/off, level and pan. -->
+    <div class="ns-section ns-section-cab"><span>CAB</span></div>
+    <div class="ns-row ns-row-ir">
+        <div class="ns-ctrl">
+            <p>ON</p>
+            <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="ir1_on"></div>
+            <div class="ns-value"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>LEVEL</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="ir1_gain"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="ir1_gain"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>PAN</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="ir1_pan"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="ir1_pan"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>ON</p>
+            <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="ir2_on"></div>
+            <div class="ns-value"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>LEVEL</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="ir2_gain"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="ir2_gain"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>PAN</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="ir2_pan"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="ir2_pan"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>ON</p>
+            <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="ir3_on"></div>
+            <div class="ns-value"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>LEVEL</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="ir3_gain"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="ir3_gain"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>PAN</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="ir3_pan"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="ir3_pan"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>ON</p>
+            <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="ir4_on"></div>
+            <div class="ns-value"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>LEVEL</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="ir4_gain"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="ir4_gain"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>PAN</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="ir4_pan"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="ir4_pan"></div>
+        </div>
+    </div>
+
+    <!-- Row 4: the doubler, all of it. -->
+    <div class="ns-section ns-section-dbl"><span>DOUBLER</span></div>
+    <div class="ns-row ns-row-dbl">
+        <div class="ns-ctrl">
+            <p>DOUBLER</p>
+            <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="dbl_on"></div>
+            <div class="ns-value"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>MIX</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="dbl_mix"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="dbl_mix"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>TIME</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="dbl_time"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="dbl_time"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>DETUNE</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="dbl_detune"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="dbl_detune"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>HUMANIZE</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="dbl_humanize"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="dbl_humanize"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>WIDTH</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="dbl_width"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="dbl_width"></div>
+        </div>
+    </div>
+
+    <!-- File selectors. One mustache loop for every path parameter; each entry
+         is positioned by CSS from its bare mod-parameter-uri attribute (no
+         mod-role on the wrapper, so mod-ui does not bind it): the model goes to
+         the top row, each IR above its slot's controls. The wrapper stays in
+         source order whatever mod-ui iterates, so the layout does not depend
+         on it. -->
     <div class="ns-files">
         {{#effect.parameters}}
         {{#path}}
-        <div class="ns-file">
+        <div class="ns-file" mod-parameter-uri="{{uri}}">
             <p>{{label}}</p>
             <div class="mod-enumerated ns-file-select" mod-role="input-parameter" mod-parameter-uri="{{uri}}" mod-widget="custom-select-path">
                 <div mod-role="input-parameter-value" mod-parameter-uri="{{uri}}" class="mod-enumerated-selected ns-file-selected">

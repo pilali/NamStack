@@ -308,11 +308,13 @@ def make_screenshot():
 
 
 def make_screenshot_mod():
-    """Screenshot of the MOD (plain LV2) variant: same two knob rows plus a
-    bottom row of file selectors. Mirrors mod/modgui/stylesheet-namstack-mod.css."""
-    global PEDAL_H
-    saved_h = PEDAL_H
-    PEDAL_H = 520
+    """Screenshot of the MOD (plain LV2) variant, in signal-flow reading order
+    on a 88px grid: model + quality + gain staging, all the EQ on one line
+    (tone stack then graphic EQ), IR mixer (selector above each slot's
+    on/level/pan), doubler. Mirrors mod/modgui/stylesheet-namstack-mod.css."""
+    global PEDAL_W, PEDAL_H
+    saved_w, saved_h = PEDAL_W, PEDAL_H
+    PEDAL_W, PEDAL_H = 1120, 624
     img, draw = draw_pedal()
 
     title_font = font(26 * SS, bold=True)
@@ -320,15 +322,20 @@ def make_screenshot_mod():
     label_font = font(10 * SS, bold=True)
     value_font = font(10 * SS)
 
-    draw.text((24 * SS, 12 * SS), "NamStack", font=title_font, fill=AMBER)
-    draw.text((190 * SS, 26 * SS), "NAM · AIDA-X · TONE STACK · 5-BAND EQ · IR MIXER · DOUBLER",
-              font=sub_font, fill=TEXT_DIM)
-    draw.text((PEDAL_W * SS - 24 * SS, 26 * SS), "Pilali", font=sub_font, fill=TEXT_DIM, anchor="ra")
+    # header: title, subtitle and brand share one text baseline (CSS: flex
+    # align-items baseline; title top 6 + half-leading 3 + ~24px ascent = 33)
+    baseline = 33 * SS
+    draw.text((24 * SS, baseline), "NamStack", font=title_font, fill=AMBER, anchor="ls")
+    title_w = draw.textlength("NamStack", font=title_font)
+    draw.text((24 * SS + title_w + 24 * SS, baseline),
+              "NAM · AIDA-X · TONE STACK · 5-BAND EQ · IR MIXER · DOUBLER",
+              font=sub_font, fill=TEXT_DIM, anchor="ls")
+    draw.text((PEDAL_W * SS - 24 * SS, baseline), "Pilali", font=sub_font, fill=TEXT_DIM, anchor="rs")
 
-    def draw_row(labels, switches, values, top):
+    def draw_row(labels, switches, values, top, x0=ROW_X, block_w=BLOCK_W):
         for i, label in enumerate(labels):
-            bx = ROW_X + i * BLOCK_W
-            cx = (bx + BLOCK_W / 2) * SS
+            bx = x0 + i * block_w
+            cx = (bx + block_w / 2) * SS
             draw.text((cx, (top + LABEL_H / 2) * SS), label, font=label_font, fill=TEXT, anchor="mm")
             ky = top + LABEL_H + 2
             if i in switches:
@@ -341,35 +348,71 @@ def make_screenshot_mod():
                 draw.text((cx, (ky + KNOB + 2 + VALUE_H / 2) * SS), values[i],
                           font=value_font, fill=TEXT_DIM, anchor="mm")
 
-    # rows sit slightly higher than on the desktop screenshot (CSS: 60 / 182)
-    draw_row(ROW1, ROW1_SWITCH, ROW1_VALUES, 60)
-    draw_row(ROW2_MOD, ROW2_SWITCH, ROW2_MOD_VALUES, 182)
-
-    # graphic EQ row (CSS .ns-row-eq: top 300)
-    draw_eq_row(img, draw, 300, label_font, value_font)
-
-    # file selector bar (CSS .ns-files: left 22, top 448, 148px pitch, 132x22 boxes)
-    file_labels = ["NEURAL MODEL", "IR 1", "IR 2", "IR 3", "IR 4"]
-    for i, label in enumerate(file_labels):
-        bx = 22 + i * 148
-        draw.text((bx * SS, (448 + 7) * SS), label, font=label_font, fill=TEXT, anchor="lm")
-        box = [bx * SS, 464 * SS, (bx + 132) * SS, (464 + 22) * SS]
+    def draw_file_select(bx, top, label, box_w=132):
+        draw.text((bx * SS, (top + 7) * SS), label, font=label_font, fill=TEXT, anchor="lm")
+        box = [bx * SS, (top + 16) * SS, (bx + box_w) * SS, (top + 16 + 22) * SS]
         draw.rounded_rectangle(box, radius=4 * SS, fill=(16, 17, 20), outline=(58, 60, 66), width=SS)
-        draw.text(((bx + 6) * SS, (464 + 11) * SS), "-- none --", font=value_font,
+        draw.text(((bx + 6) * SS, (top + 16 + 11) * SS), "-- none --", font=value_font,
                   fill=AMBER, anchor="lm")
 
-    # footswitch + led (CSS: fsw 880/452 48px, led 897/428 14px)
-    fx, fy = 904, 476
+    def draw_section(top, label):
+        # thin rule broken by the section name (CSS .ns-section: left 28,
+        # 1064 wide, 472px segments around a 120px centre gap, line at top+7)
+        y = (top + 7) * SS
+        draw.line([28 * SS, y, (28 + 472) * SS, y], fill=(58, 60, 66), width=SS)
+        draw.line([(28 + 472 + 120) * SS, y, (28 + 1064) * SS, y], fill=(58, 60, 66), width=SS)
+        draw.text(((28 + 472 + 60) * SS, (top + 7) * SS), label,
+                  font=label_font, fill=TEXT_DIM, anchor="mm")
+
+    # row 1 (CSS .ns-row-model: top 70, left 460) after the model selector
+    # (CSS .ns-file[#model]: left 220, top 94, 232px box); centred as a group
+    draw_section(50, "A M P")
+    draw_file_select(220, 94, "NEURAL MODEL", box_w=232)
+    draw_row(["QUALITY", "INPUT", "PARAM 1", "PARAM 2", "OUTPUT"], set(),
+             {0: "1.00", 1: "0.0 dB", 2: "0.50", 3: "0.50", 4: "0.0 dB"}, 70, x0=460)
+
+    # row 2, all the EQ on one line (CSS .ns-row-eq: top 190, left 28): the
+    # tone stack, then the graphic EQ switches and faders
+    draw_section(170, "E Q")
+    draw_row(["STACK", "STACK ON", "PRE/POST", "BASS", "MIDDLE", "TREBLE",
+              "EQ ON", "EQ PRE/POST"], {1, 2, 6, 7},
+             {3: "0.50", 4: "0.50", 5: "0.50"}, 190, x0=28)
+    fader_x0 = 28 + 8 * BLOCK_W
+    for i, label in enumerate(EQ_BANDS):
+        cx = (fader_x0 + i * FADER_BLOCK_W + FADER_BLOCK_W / 2) * SS
+        draw.text((cx, (190 + LABEL_H / 2) * SS), label, font=label_font, fill=TEXT, anchor="mm")
+        fy = 190 + LABEL_H + 2
+        fd = Image.new("RGBA", (FADER_W * SS, FADER_H * SS), (0, 0, 0, 0))
+        draw_fader_frame(ImageDraw.Draw(fd), 0, 0.5)  # centre = 0 dB
+        img.alpha_composite(fd, (int(cx - FADER_W / 2 * SS), fy * SS))
+        draw.text((cx, (fy + FADER_H + 2 + VALUE_H / 2) * SS), "0.0 dB",
+                  font=value_font, fill=TEXT_DIM, anchor="mm")
+
+    # row 3, IR mixer: file selector above each slot's on / level / pan
+    # (CSS .ns-file[#ir*]: 264px pitch from left 32, top 350; .ns-row-ir: top 392)
+    draw_section(330, "C A B")
+    for i in range(4):
+        draw_file_select(32 + i * 264, 350, "IR %d" % (i + 1), box_w=232)
+    draw_row(["ON", "LEVEL", "PAN"] * 4, {0, 3, 6, 9},
+             {i: ("0.0 dB" if i % 3 == 1 else "0.00") for i in range(12) if i % 3}, 392, x0=32)
+
+    # row 4, the whole doubler (CSS .ns-row-dbl: top 512, left 296)
+    draw_section(492, "D O U B L E R")
+    draw_row(["DOUBLER", "MIX", "TIME", "DETUNE", "HUMANIZE", "WIDTH"], {0},
+             {1: "0.50", 2: "18 ms", 3: "9.0 ct", 4: "0.30", 5: "1.00"}, 512, x0=296)
+
+    # footswitch + led (CSS: fsw 1040/568 48px, led 1057/544 14px)
+    fx, fy = 1064, 592
     draw.ellipse([(fx - 24) * SS, (fy - 24) * SS, (fx + 24) * SS, (fy + 24) * SS],
                  fill=(60, 62, 68), outline=PANEL_EDGE, width=2 * SS)
     draw.ellipse([(fx - 16) * SS, (fy - 16) * SS, (fx + 16) * SS, (fy + 16) * SS],
                  fill=(84, 86, 94))
-    draw.ellipse([(fx - 7) * SS, (435 - 7) * SS, (fx + 7) * SS, (435 + 7) * SS],
+    draw.ellipse([(fx - 7) * SS, (551 - 7) * SS, (fx + 7) * SS, (551 + 7) * SS],
                  fill=AMBER, outline=AMBER_DIM, width=SS)
 
     img = img.resize((PEDAL_W, PEDAL_H), Image.LANCZOS)
     img.save(os.path.join(OUT, "screenshot-namstack-mod.png"))
-    PEDAL_H = saved_h
+    PEDAL_W, PEDAL_H = saved_w, saved_h
 
 
 def make_thumbnail():

@@ -198,9 +198,18 @@ if(NAMSTACK_BUILD_MOD_LV2)
     target_link_libraries(namstack_mod PRIVATE namstack_core pffft)
 
     # Belt and braces alongside the hidden visibility set above: symbols pulled
-    # in from the static archives must not be re-exported by the module either.
+    # in from the static archives must not be re-exported by the module either
+    # (--exclude-libs), and whatever still slips through is localised by the
+    # version script. That last layer is load-bearing: libstdc++'s headers pin
+    # their template instantiations to default visibility, overriding
+    # -fvisibility=hidden, and which ones a given GCC emits out of line varies
+    # by version -- GCC 11 exports four of them from this module, GCC 13 none.
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        target_link_options(namstack_mod PRIVATE -Wl,--exclude-libs,ALL)
+        target_link_options(namstack_mod PRIVATE
+            -Wl,--exclude-libs,ALL
+            -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/mod/namstack.map)
+        set_property(TARGET namstack_mod APPEND PROPERTY
+            LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/mod/namstack.map)
     endif()
 
     # Assemble the LV2 bundle next to the binary. This is driven by a stamp file

@@ -27,8 +27,11 @@ private:
     using ComboAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
     using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
 
+    // Group titles mirror the MOD pedal's section rules: AMP / EQ / CAB /
+    // DOUBLER, in the same order and with the same row contents.
+
     // ------------------------------------------------------------ amp model
-    juce::GroupComponent ampGroup { {}, "AMP MODEL  (NAM / AIDA-X)" };
+    juce::GroupComponent ampGroup { {}, "AMP" };
     juce::TextButton loadModelButton { "Load model..." };
     juce::TextButton clearModelButton { "Clear" };
     juce::Label modelNameLabel, modelInfoLabel;
@@ -45,9 +48,9 @@ private:
     juce::Label qualityLabel { {}, "Quality" };
     std::unique_ptr<SliderAttachment> qualityAttachment;
 
-    // ------------------------------------------------------------ tone stack
-    juce::GroupComponent toneGroup { {}, "TONE STACK" };
-    juce::ToggleButton toneOnButton { "On" };
+    // -------------------------------------------- EQ: tone stack + graphic
+    juce::GroupComponent eqGroup { {}, "EQ" };
+    juce::ToggleButton toneOnButton { "Stack On" };
     juce::ComboBox toneStackBox, tonePositionBox;
     juce::Slider bassSlider, midSlider, trebleSlider;
     juce::Label bassLabel { {}, "Bass" }, midLabel { {}, "Middle" }, trebleLabel { {}, "Treble" };
@@ -55,10 +58,9 @@ private:
     std::unique_ptr<ComboAttachment> toneStackAttachment, tonePositionAttachment;
     std::unique_ptr<SliderAttachment> bassAttachment, midAttachment, trebleAttachment;
 
-    // ------------------------------------------------------------ graphic EQ
-    // Mesa/Boogie-style 5-band, with its own on/off and its own pre/post.
-    juce::GroupComponent geqGroup { {}, "GRAPHIC EQ (5-BAND)" };
-    juce::ToggleButton geqOnButton { "On" };
+    // Mesa/Boogie-style 5-band, with its own on/off and its own pre/post,
+    // sharing the EQ row with the tone stack as on the MOD pedal.
+    juce::ToggleButton geqOnButton { "EQ On" };
     juce::ComboBox geqPositionBox;
     juce::Slider geqSliders[nsdsp::GraphicEQ::numBands];
     juce::Label geqLabels[nsdsp::GraphicEQ::numBands];
@@ -67,15 +69,16 @@ private:
     std::unique_ptr<SliderAttachment> geqAttachments[nsdsp::GraphicEQ::numBands];
 
     // -------------------------------------------------------------- IR slots
-    juce::GroupComponent irGroup { {}, "CABINET IMPULSE RESPONSES" };
+    juce::GroupComponent irGroup { {}, "CAB" };
 
     struct IRRow
     {
-        juce::ToggleButton onButton;
+        juce::ToggleButton onButton { "On" };
         juce::TextButton loadButton { "Load IR..." };
         juce::TextButton clearButton { "X" };
         juce::Label nameLabel;
         juce::Slider gainSlider, panSlider;
+        juce::Label gainLabel { {}, "Level" }, panLabel { {}, "Pan" };
         std::unique_ptr<ButtonAttachment> onAttachment;
         std::unique_ptr<SliderAttachment> gainAttachment, panAttachment;
     };

@@ -17,6 +17,18 @@ const std::array<ToneStack::Components, ToneStack::numModels>& ToneStack::getMod
         { "Vox AC30 Top Boost",     1e6,    1e6, 10e3,   100e3, 50e-12,  22e-9,  22e-9 },
         { "Ampeg SVT",              250e3,  1e6, 25e3,   32e3, 470e-12, 22e-9,  22e-9 },
         { "Soldano SLO-100",        250e3,  1e6, 25e3,   47e3, 470e-12, 20e-9,  20e-9 },
+        // The DR103's stack is not the Fender topology this class models -- its
+        // treble side is a bridged pair (1nF + 220pF with 220k across), the mid
+        // sits above the bass in the chain and the bass pot is straddled by two
+        // 47nF from the 100k feed -- so its values cannot simply be copied in.
+        // What carries over literally (DR103 preamp schematic, issue 4): 220k
+        // treble pot, 470k bass pot, the 100k feed as the slope resistor, 180pF
+        // treble cap (1nF in series with 220pF) and a 47nF mid cap. The mid
+        // resistance and bass cap are then fitted (33k, 22nF) so this topology
+        // reproduces the circuit's character: a ~4dB mid dip at noon where the
+        // Fenders sit at 8-12dB, mids up flattens it out, and bass/treble reach
+        // comparable to the other models here.
+        { "Hiwatt DR103",           220e3,  470e3, 33e3,  100e3, 180e-12, 22e-9, 47e-9 },
     } };
     return models;
 }
