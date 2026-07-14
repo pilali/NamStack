@@ -314,7 +314,7 @@ def make_screenshot_mod():
     on/level/pan), doubler. Mirrors mod/modgui/stylesheet-namstack-mod.css."""
     global PEDAL_W, PEDAL_H
     saved_w, saved_h = PEDAL_W, PEDAL_H
-    PEDAL_W, PEDAL_H = 1120, 560
+    PEDAL_W, PEDAL_H = 1120, 624
     img, draw = draw_pedal()
 
     title_font = font(26 * SS, bold=True)
@@ -350,22 +350,33 @@ def make_screenshot_mod():
         draw.text(((bx + 6) * SS, (top + 16 + 11) * SS), "-- none --", font=value_font,
                   fill=AMBER, anchor="lm")
 
-    # row 1 (CSS .ns-row-model: top 60, left 460) after the model selector
-    # (CSS .ns-file[#model]: left 220, top 84, 232px box); centred as a group
-    draw_file_select(220, 84, "NEURAL MODEL", box_w=232)
-    draw_row(["QUALITY", "INPUT", "PARAM 1", "PARAM 2", "OUTPUT"], set(),
-             {0: "1.00", 1: "0.0 dB", 2: "0.50", 3: "0.50", 4: "0.0 dB"}, 60, x0=460)
+    def draw_section(top, label):
+        # thin rule broken by the section name (CSS .ns-section: left 28,
+        # 1064 wide, 472px segments around a 120px centre gap, line at top+7)
+        y = (top + 7) * SS
+        draw.line([28 * SS, y, (28 + 472) * SS, y], fill=(58, 60, 66), width=SS)
+        draw.line([(28 + 472 + 120) * SS, y, (28 + 1064) * SS, y], fill=(58, 60, 66), width=SS)
+        draw.text(((28 + 472 + 60) * SS, (top + 7) * SS), label,
+                  font=label_font, fill=TEXT_DIM, anchor="mm")
 
-    # row 2, all the EQ on one line (CSS .ns-row-eq: top 164, left 28): the
+    # row 1 (CSS .ns-row-model: top 70, left 460) after the model selector
+    # (CSS .ns-file[#model]: left 220, top 94, 232px box); centred as a group
+    draw_section(50, "A M P")
+    draw_file_select(220, 94, "NEURAL MODEL", box_w=232)
+    draw_row(["QUALITY", "INPUT", "PARAM 1", "PARAM 2", "OUTPUT"], set(),
+             {0: "1.00", 1: "0.0 dB", 2: "0.50", 3: "0.50", 4: "0.0 dB"}, 70, x0=460)
+
+    # row 2, all the EQ on one line (CSS .ns-row-eq: top 190, left 28): the
     # tone stack, then the graphic EQ switches and faders
+    draw_section(170, "E Q")
     draw_row(["STACK", "STACK ON", "PRE/POST", "BASS", "MIDDLE", "TREBLE",
               "EQ ON", "EQ PRE/POST"], {1, 2, 6, 7},
-             {3: "0.50", 4: "0.50", 5: "0.50"}, 164, x0=28)
+             {3: "0.50", 4: "0.50", 5: "0.50"}, 190, x0=28)
     fader_x0 = 28 + 8 * BLOCK_W
     for i, label in enumerate(EQ_BANDS):
         cx = (fader_x0 + i * FADER_BLOCK_W + FADER_BLOCK_W / 2) * SS
-        draw.text((cx, (164 + LABEL_H / 2) * SS), label, font=label_font, fill=TEXT, anchor="mm")
-        fy = 164 + LABEL_H + 2
+        draw.text((cx, (190 + LABEL_H / 2) * SS), label, font=label_font, fill=TEXT, anchor="mm")
+        fy = 190 + LABEL_H + 2
         fd = Image.new("RGBA", (FADER_W * SS, FADER_H * SS), (0, 0, 0, 0))
         draw_fader_frame(ImageDraw.Draw(fd), 0, 0.5)  # centre = 0 dB
         img.alpha_composite(fd, (int(cx - FADER_W / 2 * SS), fy * SS))
@@ -373,23 +384,25 @@ def make_screenshot_mod():
                   font=value_font, fill=TEXT_DIM, anchor="mm")
 
     # row 3, IR mixer: file selector above each slot's on / level / pan
-    # (CSS .ns-file[#ir*]: 264px pitch from left 32, top 312; .ns-row-ir: top 354)
+    # (CSS .ns-file[#ir*]: 264px pitch from left 32, top 350; .ns-row-ir: top 392)
+    draw_section(330, "C A B")
     for i in range(4):
-        draw_file_select(32 + i * 264, 312, "IR %d" % (i + 1), box_w=232)
+        draw_file_select(32 + i * 264, 350, "IR %d" % (i + 1), box_w=232)
     draw_row(["ON", "LEVEL", "PAN"] * 4, {0, 3, 6, 9},
-             {i: ("0.0 dB" if i % 3 == 1 else "0.00") for i in range(12) if i % 3}, 354, x0=32)
+             {i: ("0.0 dB" if i % 3 == 1 else "0.00") for i in range(12) if i % 3}, 392, x0=32)
 
-    # row 4, the whole doubler (CSS .ns-row-dbl: top 458, left 296)
+    # row 4, the whole doubler (CSS .ns-row-dbl: top 512, left 296)
+    draw_section(492, "D O U B L E R")
     draw_row(["DOUBLER", "MIX", "TIME", "DETUNE", "HUMANIZE", "WIDTH"], {0},
-             {1: "0.50", 2: "18 ms", 3: "9.0 ct", 4: "0.30", 5: "1.00"}, 458, x0=296)
+             {1: "0.50", 2: "18 ms", 3: "9.0 ct", 4: "0.30", 5: "1.00"}, 512, x0=296)
 
-    # footswitch + led (CSS: fsw 1040/480 48px, led 1057/456 14px)
-    fx, fy = 1064, 504
+    # footswitch + led (CSS: fsw 1040/568 48px, led 1057/544 14px)
+    fx, fy = 1064, 592
     draw.ellipse([(fx - 24) * SS, (fy - 24) * SS, (fx + 24) * SS, (fy + 24) * SS],
                  fill=(60, 62, 68), outline=PANEL_EDGE, width=2 * SS)
     draw.ellipse([(fx - 16) * SS, (fy - 16) * SS, (fx + 16) * SS, (fy + 16) * SS],
                  fill=(84, 86, 94))
-    draw.ellipse([(fx - 7) * SS, (463 - 7) * SS, (fx + 7) * SS, (463 + 7) * SS],
+    draw.ellipse([(fx - 7) * SS, (551 - 7) * SS, (fx + 7) * SS, (551 + 7) * SS],
                  fill=AMBER, outline=AMBER_DIM, width=SS)
 
     img = img.resize((PEDAL_W, PEDAL_H), Image.LANCZOS)

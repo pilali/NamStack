@@ -11,7 +11,7 @@
 .namstackmod{{{cns}}} {
     position: absolute;
     width: 1120px;
-    height: 560px;
+    height: 624px;
     background: linear-gradient(#26282e, #181a1e);
     border: 2px solid #0c0d0f;
     border-radius: 12px;
@@ -72,11 +72,55 @@
      row 3: 4 slots * 264        = 1056        -> (1120-1056)/2 = 32
      row 4: 6*88                 = 528         -> (1120-528)/2  = 296
    Row 1's knobs start after the selector (220 + 240); row 3's controls sit
-   under the IR selectors (top 312). */
-.namstackmod{{{cns}}} .ns-row-model { top: 60px; left: 460px; }
-.namstackmod{{{cns}}} .ns-row-eq    { top: 164px; left: 28px; }
-.namstackmod{{{cns}}} .ns-row-ir    { top: 354px; left: 32px; }
-.namstackmod{{{cns}}} .ns-row-dbl   { top: 458px; left: 296px; }
+   under the IR selectors (top 350). */
+.namstackmod{{{cns}}} .ns-row-model { top: 70px; left: 460px; }
+.namstackmod{{{cns}}} .ns-row-eq    { top: 190px; left: 28px; }
+.namstackmod{{{cns}}} .ns-row-ir    { top: 392px; left: 32px; }
+.namstackmod{{{cns}}} .ns-row-dbl   { top: 512px; left: 296px; }
+
+/* ------------------------------------------------------- section rules */
+/* A thin rule above each row, broken in the middle by the section's name.
+   The two line segments are fixed-width (the pedal is 1064px inside its 28px
+   margins, with a 120px centre gap: (1064 - 120) / 2 = 472), so no calc() is
+   needed and the screenshot generator can mirror the numbers exactly. */
+.namstackmod{{{cns}}} .ns-section {
+    position: absolute;
+    left: 28px;
+    width: 1064px;
+    height: 14px;
+    pointer-events: none;
+}
+
+.namstackmod{{{cns}}} .ns-section-amp { top: 50px; }
+.namstackmod{{{cns}}} .ns-section-eq  { top: 170px; }
+.namstackmod{{{cns}}} .ns-section-cab { top: 330px; }
+.namstackmod{{{cns}}} .ns-section-dbl { top: 492px; }
+
+.namstackmod{{{cns}}} .ns-section:before,
+.namstackmod{{{cns}}} .ns-section:after {
+    content: "";
+    position: absolute;
+    top: 7px;
+    width: 472px;
+    height: 1px;
+    background: #3a3c42;
+}
+
+.namstackmod{{{cns}}} .ns-section:before { left: 0; }
+.namstackmod{{{cns}}} .ns-section:after  { right: 0; }
+
+.namstackmod{{{cns}}} .ns-section span {
+    position: absolute;
+    left: 472px;
+    top: 0;
+    width: 120px;
+    line-height: 14px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: #8c8e94;
+}
 
 .namstackmod{{{cns}}} .ns-ctrl {
     width: 88px;
@@ -172,14 +216,14 @@
 /* the neural model, top row, centred against the knobs beside it */
 .namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#model"] {
     left: 220px;
-    top: 84px;
+    top: 94px;
 }
 
 /* one selector above each IR slot's on / level / pan (264px slot pitch) */
-.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir1"] { left: 32px;  top: 312px; }
-.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir2"] { left: 296px; top: 312px; }
-.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir3"] { left: 560px; top: 312px; }
-.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir4"] { left: 824px; top: 312px; }
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir1"] { left: 32px;  top: 350px; }
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir2"] { left: 296px; top: 350px; }
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir3"] { left: 560px; top: 350px; }
+.namstackmod{{{cns}}} .ns-file[mod-parameter-uri$="#ir4"] { left: 824px; top: 350px; }
 
 .namstackmod{{{cns}}} .ns-file p {
     margin: 0 0 2px;
@@ -246,7 +290,7 @@
 .namstackmod{{{cns}}} .ns-footswitch {
     position: absolute;
     left: 1040px;
-    top: 480px;
+    top: 568px;
     width: 48px;
     height: 48px;
     background-image: url(/resources/footswitch.png{{{ns}}});
@@ -257,7 +301,7 @@
 .namstackmod{{{cns}}} .ns-led {
     position: absolute;
     left: 1057px;
-    top: 456px;
+    top: 544px;
     width: 14px;
     height: 14px;
     border-radius: 50%;

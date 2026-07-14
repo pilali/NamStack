@@ -12,6 +12,7 @@
          selector, positioned here by CSS out of the ns-files loop below) with
          its A2 quality, then the gain staging: input, the two AIDA
          conditioning params, output. -->
+    <div class="ns-section ns-section-amp"><span>AMP</span></div>
     <div class="ns-row ns-row-model">
         <div class="ns-ctrl">
             <p>QUALITY</p>
@@ -44,6 +45,7 @@
          graphic EQ (Mesa/Boogie Mark voicing: 80 / 240 / 750 / 2200 / 6600 Hz).
          Each EQ's Pre/Post picks its side of the neural model; when both land
          on the same side, the graphic EQ runs after the tone stack. -->
+    <div class="ns-section ns-section-eq"><span>EQ</span></div>
     <div class="ns-row ns-row-eq">
         <!-- ts_model is a 9-way enumeration (Bypass, Bassman, Twin Reverb, ...).
              It stays a knob so it can be addressed to a hardware pot, but it needs
@@ -119,6 +121,7 @@
     <!-- Row 3: the IR mixer, one full slot per 264px (3 grid cells): the
          slot's file selector (from the ns-files loop below, positioned by CSS)
          above its on/off, level and pan. -->
+    <div class="ns-section ns-section-cab"><span>CAB</span></div>
     <div class="ns-row ns-row-ir">
         <div class="ns-ctrl">
             <p>ON</p>
@@ -183,6 +186,7 @@
     </div>
 
     <!-- Row 4: the doubler, all of it. -->
+    <div class="ns-section ns-section-dbl"><span>DOUBLER</span></div>
     <div class="ns-row ns-row-dbl">
         <div class="ns-ctrl">
             <p>DOUBLER</p>
