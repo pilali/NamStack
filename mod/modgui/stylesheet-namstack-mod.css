@@ -29,12 +29,15 @@
 }
 
 /* ------------------------------------------------------------- header */
+/* Title, subtitle and brand share the same 32px band (top: 6) and centre on
+   the same line through their common line-height. */
 .namstackmod{{{cns}}} .ns-header h1 {
     position: absolute;
     top: 6px;
     left: 24px;
     margin: 0;
     font-size: 26px;
+    line-height: 32px;
     font-weight: bold;
     color: #f0a030;
     pointer-events: none;
@@ -42,18 +45,20 @@
 
 .namstackmod{{{cns}}} .ns-subtitle {
     position: absolute;
-    top: 26px;
+    top: 6px;
     left: 190px;
     font-size: 11px;
+    line-height: 32px;
     color: #8c8e94;
     pointer-events: none;
 }
 
 .namstackmod{{{cns}}} .ns-brand {
     position: absolute;
-    top: 26px;
+    top: 6px;
     right: 24px;
     font-size: 11px;
+    line-height: 32px;
     color: #8c8e94;
     pointer-events: none;
 }
