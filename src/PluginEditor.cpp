@@ -64,8 +64,8 @@ NamStackAudioProcessorEditor::NamStackAudioProcessorEditor (NamStackAudioProcess
     addAndMakeVisible (qualityLabel);
     qualityAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::modelQuality, qualitySlider);
 
-    // ------------------------------------------------------------ tone stack
-    addAndMakeVisible (toneGroup);
+    // -------------------------------------------- EQ: tone stack + graphic
+    addAndMakeVisible (eqGroup);
     addAndMakeVisible (toneOnButton);
     addAndMakeVisible (toneStackBox);
     addAndMakeVisible (tonePositionBox);
@@ -94,8 +94,6 @@ NamStackAudioProcessorEditor::NamStackAudioProcessorEditor (NamStackAudioProcess
     midAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::tsMid, midSlider);
     trebleAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::tsTreble, trebleSlider);
 
-    // ------------------------------------------------------------ graphic EQ
-    addAndMakeVisible (geqGroup);
     addAndMakeVisible (geqOnButton);
     addAndMakeVisible (geqPositionBox);
 
@@ -142,12 +140,14 @@ NamStackAudioProcessorEditor::NamStackAudioProcessorEditor (NamStackAudioProcess
         row.clearButton.onClick = [this, i] { processor.clearIR (i); };
         row.nameLabel.setJustificationType (juce::Justification::centredLeft);
 
-        row.gainSlider.setSliderStyle (juce::Slider::LinearHorizontal);
-        row.gainSlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 56, 16);
+        // Rotary level and pan under the slot's file line, as on the MOD pedal.
+        setupRotary (row.gainSlider);
         row.gainSlider.setTextValueSuffix (" dB");
-
-        row.panSlider.setSliderStyle (juce::Slider::LinearHorizontal);
-        row.panSlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 48, 16);
+        setupRotary (row.panSlider);
+        setupCaption (row.gainLabel);
+        setupCaption (row.panLabel);
+        addAndMakeVisible (row.gainLabel);
+        addAndMakeVisible (row.panLabel);
 
         row.onAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::irOn (i), row.onButton);
         row.gainAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::irGain (i), row.gainSlider);
@@ -187,7 +187,7 @@ NamStackAudioProcessorEditor::NamStackAudioProcessorEditor (NamStackAudioProcess
     processor.fileStateChanged.addChangeListener (this);
     refreshFileLabels();
 
-    setSize (920, 878); // + the graphic-EQ group
+    setSize (1140, 812); // four bands, laid out like the MOD pedal
 }
 
 NamStackAudioProcessorEditor::~NamStackAudioProcessorEditor()
@@ -261,147 +261,152 @@ void NamStackAudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 
-    g.setColour (juce::Colours::white);
-    g.setFont (juce::FontOptions (24.0f, juce::Font::bold));
-    g.drawText ("NamStack", 20, 8, 300, 30, juce::Justification::centredLeft);
+    // Title, feature list and brand share one text baseline, as on the MOD
+    // pedal's header.
+    const float baseline = 32.0f;
 
+    auto titleFont = juce::Font (juce::FontOptions (24.0f, juce::Font::bold));
+    g.setColour (juce::Colours::white);
+    g.setFont (titleFont);
+    g.drawSingleLineText ("NamStack", 20, (int) baseline);
+
+    auto subFont = juce::Font (juce::FontOptions (13.0f));
     g.setColour (juce::Colours::grey);
-    g.setFont (juce::FontOptions (13.0f));
-    g.drawText ("NAM / AIDA-X amp modeler  -  tone stack  -  IR mixer  -  doubler",
-                200, 8, getWidth() - 220, 30, juce::Justification::centredRight);
+    g.setFont (subFont);
+    g.drawSingleLineText (juce::String (juce::CharPointer_UTF8 (
+                              "NAM \xc2\xb7 AIDA-X \xc2\xb7 TONE STACK \xc2\xb7 5-BAND EQ "
+                              "\xc2\xb7 IR MIXER \xc2\xb7 DOUBLER")),
+                          20 + juce::GlyphArrangement::getStringWidthInt (titleFont, "NamStack") + 24,
+                          (int) baseline);
+    g.drawSingleLineText ("Pilali", getWidth() - 20, (int) baseline,
+                          juce::Justification::right);
 }
 
 void NamStackAudioProcessorEditor::resized()
 {
+    // Four bands in the MOD pedal's order and shape: AMP (model + quality and
+    // gain staging), EQ (tone stack then graphic EQ on one line), CAB (one
+    // column per IR slot: file line above on / level / pan), DOUBLER.
     auto bounds = getLocalBounds().reduced (12);
     bounds.removeFromTop (34); // header
 
-    // ------------------------------------------------------------ amp model
+    const int knobWidth = 96;
+
+    auto placeKnob = [] (juce::Rectangle<int>& area, int width,
+                         juce::Slider& slider, juce::Label& label)
+    {
+        auto cell = area.removeFromLeft (width);
+        label.setBounds (cell.removeFromTop (16));
+        slider.setBounds (cell);
+    };
+
+    // ------------------------------------------------------------------ AMP
     auto ampArea = bounds.removeFromTop (140);
     ampGroup.setBounds (ampArea);
     auto ampInner = ampArea.reduced (14, 22);
 
-    auto knobsArea = ampInner.removeFromRight (525);
-
-    auto placeAmpKnob = [&knobsArea] (juce::Slider& slider, juce::Label& label)
-    {
-        auto area = knobsArea.removeFromLeft (105);
-        label.setBounds (area.removeFromBottom (16));
-        slider.setBounds (area);
-    };
-
-    placeAmpKnob (aidaParam1Slider, aidaParam1Label);
-    placeAmpKnob (aidaParam2Slider, aidaParam2Label);
-    placeAmpKnob (qualitySlider, qualityLabel);
-    placeAmpKnob (inputGainSlider, inputGainLabel);
-    placeAmpKnob (outputGainSlider, outputGainLabel);
-
-    auto modelButtons = ampInner.removeFromTop (28);
+    // model column on the left, as the pedal's file selector
+    auto modelColumn = ampInner.removeFromLeft (330);
+    auto modelButtons = modelColumn.removeFromTop (26);
     loadModelButton.setBounds (modelButtons.removeFromLeft (130));
     modelButtons.removeFromLeft (8);
     clearModelButton.setBounds (modelButtons.removeFromLeft (70));
+    modelColumn.removeFromTop (8);
+    modelNameLabel.setBounds (modelColumn.removeFromTop (24));
+    modelInfoLabel.setBounds (modelColumn.removeFromTop (20));
 
-    ampInner.removeFromTop (8);
-    modelNameLabel.setBounds (ampInner.removeFromTop (24));
-    modelInfoLabel.setBounds (ampInner.removeFromTop (20));
+    ampInner.removeFromLeft (24);
 
-    bounds.removeFromTop (8);
-
-    // ------------------------------------------------------------ tone stack
-    auto toneArea = bounds.removeFromTop (150);
-    toneGroup.setBounds (toneArea);
-    auto toneInner = toneArea.reduced (14, 22);
-
-    toneOnButton.setBounds (toneInner.removeFromLeft (56).withHeight (26));
-    toneInner.removeFromLeft (8);
-
-    auto comboColumn = toneInner.removeFromLeft (260);
-    toneStackBox.setBounds (comboColumn.removeFromTop (26));
-    comboColumn.removeFromTop (10);
-    tonePositionBox.setBounds (comboColumn.removeFromTop (26));
-
-    toneInner.removeFromLeft (20);
-    const auto knobWidth = juce::jmin (120, toneInner.getWidth() / 3);
-
-    auto placeKnob = [&toneInner, knobWidth] (juce::Slider& slider, juce::Label& label)
-    {
-        auto area = toneInner.removeFromLeft (knobWidth);
-        label.setBounds (area.removeFromBottom (16));
-        slider.setBounds (area);
-    };
-
-    placeKnob (bassSlider, bassLabel);
-    placeKnob (midSlider, midLabel);
-    placeKnob (trebleSlider, trebleLabel);
+    // pedal order: quality, input, param 1, param 2, output
+    placeKnob (ampInner, knobWidth, qualitySlider, qualityLabel);
+    placeKnob (ampInner, knobWidth, inputGainSlider, inputGainLabel);
+    placeKnob (ampInner, knobWidth, aidaParam1Slider, aidaParam1Label);
+    placeKnob (ampInner, knobWidth, aidaParam2Slider, aidaParam2Label);
+    placeKnob (ampInner, knobWidth, outputGainSlider, outputGainLabel);
 
     bounds.removeFromTop (8);
 
-    // ------------------------------------------------------------ graphic EQ
-    auto geqArea = bounds.removeFromTop (170);
-    geqGroup.setBounds (geqArea);
-    auto geqInner = geqArea.reduced (14, 22);
+    // ------------------------------------------------------------------- EQ
+    // tone stack then graphic EQ on a single line, as on the pedal
+    auto eqArea = bounds.removeFromTop (190);
+    eqGroup.setBounds (eqArea);
+    auto eqInner = eqArea.reduced (14, 22);
 
-    auto geqControls = geqInner.removeFromLeft (200);
-    geqOnButton.setBounds (geqControls.removeFromTop (26));
-    geqControls.removeFromTop (10);
-    geqPositionBox.setBounds (geqControls.removeFromTop (26));
+    auto tsColumn = eqInner.removeFromLeft (230);
+    toneOnButton.setBounds (tsColumn.removeFromTop (24));
+    tsColumn.removeFromTop (8);
+    toneStackBox.setBounds (tsColumn.removeFromTop (26));
+    tsColumn.removeFromTop (8);
+    tonePositionBox.setBounds (tsColumn.removeFromTop (26));
 
-    geqInner.removeFromLeft (20);
-    const auto faderWidth = geqInner.getWidth() / nsdsp::GraphicEQ::numBands;
+    eqInner.removeFromLeft (16);
+    placeKnob (eqInner, knobWidth, bassSlider, bassLabel);
+    placeKnob (eqInner, knobWidth, midSlider, midLabel);
+    placeKnob (eqInner, knobWidth, trebleSlider, trebleLabel);
+
+    eqInner.removeFromLeft (16);
+    auto geqColumn = eqInner.removeFromLeft (170);
+    geqOnButton.setBounds (geqColumn.removeFromTop (24));
+    geqColumn.removeFromTop (8);
+    geqPositionBox.setBounds (geqColumn.removeFromTop (26));
+
+    eqInner.removeFromLeft (16);
+    const auto faderWidth = eqInner.getWidth() / nsdsp::GraphicEQ::numBands;
 
     for (int band = 0; band < nsdsp::GraphicEQ::numBands; ++band)
     {
-        auto area = geqInner.removeFromLeft (faderWidth);
-        geqLabels[band].setBounds (area.removeFromBottom (16));
+        auto area = eqInner.removeFromLeft (faderWidth);
+        geqLabels[band].setBounds (area.removeFromTop (16));
         geqSliders[band].setBounds (area);
     }
 
     bounds.removeFromTop (8);
 
-    // -------------------------------------------------------------- IR slots
-    auto irArea = bounds.removeFromTop (172);
+    // ------------------------------------------------------------------ CAB
+    // one column per IR slot: file line above on / level / pan
+    auto irArea = bounds.removeFromTop (216);
     irGroup.setBounds (irArea);
     auto irInner = irArea.reduced (14, 22);
 
-    const auto rowHeight = irInner.getHeight() / nsdsp::IRStack::numSlots;
+    const auto slotWidth = irInner.getWidth() / nsdsp::IRStack::numSlots;
 
     for (auto& row : irRows)
     {
-        auto rowArea = irInner.removeFromTop (rowHeight).reduced (0, 3);
+        auto slot = irInner.removeFromLeft (slotWidth).reduced (6, 0);
 
-        row.onButton.setBounds (rowArea.removeFromLeft (28));
-        row.loadButton.setBounds (rowArea.removeFromLeft (86));
-        rowArea.removeFromLeft (6);
-        row.clearButton.setBounds (rowArea.removeFromLeft (26));
-        rowArea.removeFromLeft (6);
-        row.nameLabel.setBounds (rowArea.removeFromLeft (230));
-        rowArea.removeFromLeft (8);
-        row.gainSlider.setBounds (rowArea.removeFromLeft (230));
-        rowArea.removeFromLeft (8);
-        row.panSlider.setBounds (rowArea);
+        auto fileLine = slot.removeFromTop (24);
+        row.loadButton.setBounds (fileLine.removeFromLeft (86));
+        fileLine.removeFromLeft (6);
+        row.clearButton.setBounds (fileLine.removeFromLeft (26));
+        slot.removeFromTop (4);
+        row.nameLabel.setBounds (slot.removeFromTop (20));
+        slot.removeFromTop (4);
+
+        row.onButton.setBounds (slot.removeFromLeft (52)
+                                    .withHeight (26)
+                                    .translated (0, slot.getHeight() / 2 - 13));
+        placeKnob (slot, (slot.getWidth()) / 2, row.gainSlider, row.gainLabel);
+        placeKnob (slot, slot.getWidth(), row.panSlider, row.panLabel);
     }
 
     bounds.removeFromTop (8);
 
-    // --------------------------------------------------------------- doubler
+    // -------------------------------------------------------------- DOUBLER
     auto doublerArea = bounds.removeFromTop (150);
     doublerGroup.setBounds (doublerArea);
     auto doublerInner = doublerArea.reduced (14, 22);
 
-    doublerOnButton.setBounds (doublerInner.removeFromLeft (60).withHeight (26).translated (0, doublerInner.getHeight() / 2 - 13));
+    // centred like the pedal's doubler row
+    const int doublerWidth = 60 + 5 * knobWidth;
+    doublerInner.removeFromLeft ((doublerInner.getWidth() - doublerWidth) / 2);
 
-    const auto doublerKnobWidth = juce::jmin (130, doublerInner.getWidth() / 5);
+    doublerOnButton.setBounds (doublerInner.removeFromLeft (60)
+                                   .withHeight (26)
+                                   .translated (0, doublerInner.getHeight() / 2 - 13));
 
-    auto placeDoublerKnob = [&doublerInner, doublerKnobWidth] (juce::Slider& slider, juce::Label& label)
-    {
-        auto area = doublerInner.removeFromLeft (doublerKnobWidth);
-        label.setBounds (area.removeFromBottom (16));
-        slider.setBounds (area);
-    };
-
-    placeDoublerKnob (doublerMixSlider, doublerMixLabel);
-    placeDoublerKnob (doublerTimeSlider, doublerTimeLabel);
-    placeDoublerKnob (doublerDetuneSlider, doublerDetuneLabel);
-    placeDoublerKnob (doublerHumanizeSlider, doublerHumanizeLabel);
-    placeDoublerKnob (doublerWidthSlider, doublerWidthLabel);
+    placeKnob (doublerInner, knobWidth, doublerMixSlider, doublerMixLabel);
+    placeKnob (doublerInner, knobWidth, doublerTimeSlider, doublerTimeLabel);
+    placeKnob (doublerInner, knobWidth, doublerDetuneSlider, doublerDetuneLabel);
+    placeKnob (doublerInner, knobWidth, doublerHumanizeSlider, doublerHumanizeLabel);
+    placeKnob (doublerInner, knobWidth, doublerWidthSlider, doublerWidthLabel);
 }
