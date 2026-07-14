@@ -322,12 +322,15 @@ def make_screenshot_mod():
     label_font = font(10 * SS, bold=True)
     value_font = font(10 * SS)
 
-    # header: title, subtitle and brand centred on the same line (CSS: all
-    # three share top 6 / line-height 32, so the common centre is y = 22)
-    draw.text((24 * SS, 22 * SS), "NamStack", font=title_font, fill=AMBER, anchor="lm")
-    draw.text((190 * SS, 22 * SS), "NAM · AIDA-X · TONE STACK · 5-BAND EQ · IR MIXER · DOUBLER",
-              font=sub_font, fill=TEXT_DIM, anchor="lm")
-    draw.text((PEDAL_W * SS - 24 * SS, 22 * SS), "Pilali", font=sub_font, fill=TEXT_DIM, anchor="rm")
+    # header: title, subtitle and brand share one text baseline (CSS: flex
+    # align-items baseline; title top 6 + half-leading 3 + ~24px ascent = 33)
+    baseline = 33 * SS
+    draw.text((24 * SS, baseline), "NamStack", font=title_font, fill=AMBER, anchor="ls")
+    title_w = draw.textlength("NamStack", font=title_font)
+    draw.text((24 * SS + title_w + 24 * SS, baseline),
+              "NAM · AIDA-X · TONE STACK · 5-BAND EQ · IR MIXER · DOUBLER",
+              font=sub_font, fill=TEXT_DIM, anchor="ls")
+    draw.text((PEDAL_W * SS - 24 * SS, baseline), "Pilali", font=sub_font, fill=TEXT_DIM, anchor="rs")
 
     def draw_row(labels, switches, values, top, x0=ROW_X, block_w=BLOCK_W):
         for i, label in enumerate(labels):
