@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.22)
 
+# macOS: Universal 2 binaries that still load on Intel machines running
+# Catalina. Both must be set before project() to take effect; they are cache
+# defaults, so a local build can override them (e.g. host-arch only for a
+# faster edit cycle). The arm64 slice is clamped to 11.0 by the toolchain --
+# macOS never ran on Apple silicon before Big Sur -- so 10.15 governs the
+# x86_64 slice, which is the only one a Catalina machine can be.
+set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "macOS architectures")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "macOS deployment target")
+
 project(NamStack VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
