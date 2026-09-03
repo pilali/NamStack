@@ -161,6 +161,26 @@ Lorsque les deux se retrouvent **du même côté**, l'égaliseur graphique passe
 - Les IR stéréo sont supportées ; les IR mono sont dupliquées sur les deux
   canaux avant panoramique. Chargement sans interruption audio (échange en
   arrière-plan par `juce::dsp::Convolution`).
+- **Une IR mono ne coûte que la moitié d'une stéréo.** `MultichannelEngine` de
+  JUCE construit toujours deux moteurs de convolution et donne la même IR aux
+  deux quand elle est mono, pendant que le mixeur leur envoie le même signal
+  mono : les deux calculaient donc rigoureusement la même chose. Le slot
+  convolue désormais un seul canal et le duplique — JUCE ne saute son second
+  moteur que si le bloc qu'on lui passe est lui-même mono. Mesuré à 48 kHz,
+  blocs de 128, IR de 4096 échantillons : **1 slot 298 → 150 ns/éch., 4 slots
+  1245 → 595 ns/éch.** Sans effet sur les IR stéréo, dont le chemin est
+  inchangé.
+
+  La décision suit l'IR **réellement en service**, pas celle demandée :
+  `loadImpulseResponse` est asynchrone, donc l'ancienne IR s'entend encore un
+  moment après l'appel. Le choix est gelé pendant une seconde puis adopté,
+  dans les deux sens. Le sens qui compte est mono → stéréo : tant que le
+  raccourci est actif le moteur du canal 1 n'est plus alimenté et sa ligne à
+  retard fréquentielle se fige sur de l'audio parfois vieux de plusieurs
+  minutes ; le réalimenter alors qu'il est encore le moteur en service
+  ressortirait ce contenu périmé sur toute une longueur d'IR. Attendre garantit
+  que le retour à deux canaux tombe toujours sur un moteur fraîchement
+  construit.
 - **Chaque slot peut être vidé**, et l'on peut revenir à **zéro IR** : dans
   mod-ui, l'entrée *« -- none -- »* en tête de chaque liste de fichiers efface
   le slot (elle envoie un chemin vide, que le plugin traite comme un
