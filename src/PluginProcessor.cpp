@@ -300,9 +300,21 @@ void NamStackAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     const bool geqIsPre = ((int) pGeqPosition->load()) == 0;
     const bool geqOn = pGeqOn->load() > 0.5f;
 
-    if (tsIsPre && tsOn)
+    // Engage, bypass, a move across the model and a change of amplifier are all
+    // ~25 ms crossfades inside the filters (see BypassRamp), so both are told
+    // their state once per block and then called at their own tap point; each
+    // is a no-op while it is settled in bypass.
+    toneStack.setEngaged (tsOn, tsIsPre);
+    graphicEq.setEngaged (geqOn, geqIsPre);
+
+    // Each filter says which side to run it on: mid-move that is still the old
+    // one, so its fade-out reads the signal its state came from.
+    const bool tsRunsPre = toneStack.runsPre();
+    const bool geqRunsPre = graphicEq.runsPre();
+
+    if (tsRunsPre)
         toneStack.processBlock (mono, numSamples);
-    if (geqIsPre && geqOn)
+    if (geqRunsPre)
         graphicEq.processBlock (mono, numSamples);
 
     // ---------------------------------------------------------- amp model
@@ -316,9 +328,9 @@ void NamStackAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     }
 
     // ---------------------------------------------------- equalisers (post)
-    if (! tsIsPre && tsOn)
+    if (! tsRunsPre)
         toneStack.processBlock (mono, numSamples);
-    if (! geqIsPre && geqOn)
+    if (! geqRunsPre)
         graphicEq.processBlock (mono, numSamples);
 
     // ------------------------------------------------------------- IR mix

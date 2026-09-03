@@ -58,8 +58,35 @@ void ToneStack::prepare (double sampleRate)
 {
     fs = sampleRate;
     computeMakeupGains();
+    ramp.prepare (sampleRate);
     dirty = true;
     reset();
+}
+
+void ToneStack::setEngaged (bool engaged, bool pre)
+{
+    const auto haveCircuit = currentModel > bypass && currentModel < numModels;
+
+    if (! (engaged && haveCircuit))
+    {
+        // Switched off, or the selector moved to Bypass. Either way fade out
+        // through the amplifier that is still being heard rather than cutting
+        // to dry: updateCoefficients() leaves `coeffs` alone for the bypass
+        // entry, so the coefficients of the last real circuit are still there.
+        ramp.bypassKeepingIdentity();
+        return;
+    }
+
+    // Identity: the amplifier and the tap point. A change of either makes the
+    // running state meaningless -- it belongs to another circuit, or to
+    // another point of the chain -- so the ramp fades the old one out, clears
+    // it, and fades the new one in.
+    ramp.setEngaged (true, currentModel * 2 + (pre ? 0 : 1));
+
+    // Only follow the knob once the swap has landed; until then the fade-out
+    // has to keep running where its state came from.
+    if (! ramp.isSwapping())
+        activePre = pre;
 }
 
 void ToneStack::reset()
@@ -72,9 +99,9 @@ void ToneStack::setParams (int model, float bass, float mid, float treble, bool 
     if (model != currentModel || bass != bassKnob || mid != midKnob || treble != trebleKnob
         || levelComp != compensate)
     {
-        if (model != currentModel)
-            reset();
-
+        // A model change used to reset() here. The ramp does it now, on the
+        // block that fades the new amplifier in, so the outgoing one keeps its
+        // state for as long as it is still being heard.
         currentModel = model;
         bassKnob = bass;
         midKnob = mid;
@@ -232,11 +259,38 @@ void ToneStack::updateCoefficients()
 
 void ToneStack::processBlock (float* data, int numSamples)
 {
-    if (dirty)
+    if (! ramp.isRunning())
+        return;
+
+    if (ramp.takeClearRequest())
+        reset();
+
+    // While a swap is fading out, the coefficients must stay those of the
+    // amplifier still being heard; the update lands on the block that fades
+    // the new one in.
+    if (dirty && ! ramp.isSwapping())
         updateCoefficients();
 
-    if (currentModel <= bypass || currentModel >= numModels)
+    // No test for the bypass model here: `coeffs` still holds the last real
+    // circuit's, which is exactly what a fade-out to Bypass has to run
+    // through. Before anything has ever been engaged they are the identity
+    // (b0 = 1), and the ramp is not running anyway.
+
+    // Settled at full wet: the plain in-place loop, exactly as before the ramp
+    // existed. The blend below is only paid during the 25 ms itself.
+    if (! ramp.isFading())
+    {
+        for (int i = 0; i < numSamples; ++i)
+        {
+            const double x = (double) data[i];
+            const double y = coeffs.b0 * x + z1;
+            z1 = coeffs.b1 * x - coeffs.a1 * y + z2;
+            z2 = coeffs.b2 * x - coeffs.a2 * y + z3;
+            z3 = coeffs.b3 * x - coeffs.a3 * y;
+            data[i] = (float) y;
+        }
         return;
+    }
 
     for (int i = 0; i < numSamples; ++i)
     {
@@ -245,8 +299,14 @@ void ToneStack::processBlock (float* data, int numSamples)
         z1 = coeffs.b1 * x - coeffs.a1 * y + z2;
         z2 = coeffs.b2 * x - coeffs.a2 * y + z3;
         z3 = coeffs.b3 * x - coeffs.a3 * y;
-        data[i] = (float) y;
+
+        const double g = (double) ramp.next();
+        data[i] = (float) (x + (y - x) * g);
     }
+
+    // The fade-out landed: leave no state behind for the next engage.
+    if (! ramp.isRunning())
+        reset();
 }
 
 } // namespace nsdsp

@@ -673,6 +673,18 @@ void run (LV2_Handle instance, uint32_t nSamples)
     const bool geqIsPre = param (self, kPortGeqPosition, 1.0f) < 0.5f;
     const bool geqOn = param (self, kPortGeqOn) > 0.5f;
 
+    // Engage, bypass, a move across the model and a change of amplifier are all
+    // ~25 ms crossfades inside the filters (see dsp/BypassRamp.h), so both are
+    // told their state once per callback and then called at their own tap
+    // point; each is a no-op while it is settled in bypass.
+    self->toneStack.setEngaged (tsOn, tsIsPre);
+    self->graphicEq.setEngaged (geqOn, geqIsPre);
+
+    // Each filter says which side to run it on: mid-move that is still the old
+    // one, so its fade-out reads the signal its state came from.
+    const bool tsRunsPre = self->toneStack.runsPre();
+    const bool geqRunsPre = self->graphicEq.runsPre();
+
     for (int slot = 0; slot < 4; ++slot)
         self->irMixer.setSlotParams (slot,
                                      param (self, (PortIndex) (kPortIr1On + slot * 3)) > 0.5f,
@@ -732,17 +744,17 @@ void run (LV2_Handle instance, uint32_t nSamples)
         // before the graphic EQ within both the pre and the post block is what
         // gives the required ordering: when the two land on the same side, the
         // graphic EQ follows the tone stack.
-        if (tsIsPre && tsOn)
+        if (tsRunsPre)
             self->toneStack.processBlock (mono, n);
-        if (geqIsPre && geqOn)
+        if (geqRunsPre)
             self->graphicEq.processBlock (mono, n);
 
         if (self->model != nullptr)
             self->model->process (mono, n);
 
-        if (! tsIsPre && tsOn)
+        if (! tsRunsPre)
             self->toneStack.processBlock (mono, n);
-        if (! geqIsPre && geqOn)
+        if (! geqRunsPre)
             self->graphicEq.processBlock (mono, n);
 
         self->irMixer.process (mono, self->busL.data(), self->busR.data(), n);

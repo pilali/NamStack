@@ -141,6 +141,7 @@ double GraphicEQ::wiperForGain (double gainDb, int band)
 
 void GraphicEQ::prepare (double sampleRate)
 {
+    ramp.prepare (sampleRate);
     fs = sampleRate;
 
     const double T = 1.0 / fs;
@@ -213,10 +214,30 @@ void GraphicEQ::updateCoefficients()
     dirty = false;
 }
 
+void GraphicEQ::setEngaged (bool engaged, bool pre)
+{
+    ramp.setEngaged (engaged, pre ? 0 : 1);
+
+    // Only follow the knob once the swap has landed; until then the fade-out
+    // has to keep running where its state came from.
+    if (! ramp.isSwapping())
+        activePre = pre;
+}
+
 void GraphicEQ::processBlock (float* data, int numSamples)
 {
+    if (! ramp.isRunning())
+        return;
+
+    if (ramp.takeClearRequest())
+        reset();
+
     if (dirty)
         updateCoefficients();
+
+    // Settled at full wet the blend below folds to `out`, so the branch is
+    // hoisted out of the sample loop rather than tested per sample.
+    const auto fading = ramp.isFading();
 
     for (int n = 0; n < numSamples; ++n)
     {
@@ -252,8 +273,13 @@ void GraphicEQ::processBlock (float* data, int numSamples)
             band.prevV = v;
         }
 
-        data[n] = (float) out;
+        data[n] = fading ? (float) (vin + (out - vin) * (double) ramp.next())
+                         : (float) out;
     }
+
+    // The fade-out landed: leave no state behind for the next engage.
+    if (! ramp.isRunning())
+        reset();
 }
 
 } // namespace nsdsp

@@ -58,6 +58,27 @@ bibliothèques Faust) :
 Le tone stack a son propre **on/off** et est **commutable avant (« Pre ») ou
 après (« Post »)** le modèle neuronal.
 
+**Les bascules sont des fondus, pas des interrupteurs.** Réengager un filtre en
+se contentant de le rappeler est un saut : son état s'est figé sur ce qui l'a
+traversé en dernier, et sa sortie à cet instant n'a rien à voir avec le signal
+qui passe. Mesuré sur le JCM800, une reprise après trois secondes produisait un
+saut échantillon-à-échantillon **19 fois** plus grand que celui du signal
+établi, avec une crête au-dessus de l'entrée ; le passage Pre/Post donnait 21×
+et un changement d'ampli 43×. L'EQ 5 bandes à ±12 dB montait à 8×.
+
+L'engagement, le bypass, le déplacement d'un côté à l'autre du modèle et le
+changement d'ampli sont désormais des fondus d'environ 25 ms
+(`src/dsp/BypassRamp.h`), avec l'état effacé entre les deux. Un changement
+d'identité est un échange en deux temps : l'ancien réglage fond d'abord en
+sortie — au point de la chaîne d'où vient son état, et à travers ses propres
+coefficients — puis le nouveau est adopté et fondu en entrée. Toutes les
+bascules retombent entre 1,0× et 3,6× du pas naturel du signal, et ce qui reste
+est une rampe de 25 ms, pas une discontinuité.
+
+Coût nul en régime établi : la boucle sur place est inchangée (tone stack
+4,9 ns/éch., EQ 22,4 ns/éch., identiques à avant), le mélange n'est payé que
+pendant les 25 ms, et un filtre éteint et stabilisé coûte 0,06 ns/éch.
+
 #### Compensation de niveau (« Level Comp »)
 
 Le circuit réel est **passif** : sa fonction de transfert ne dépasse jamais

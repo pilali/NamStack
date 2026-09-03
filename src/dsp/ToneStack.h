@@ -1,5 +1,7 @@
 #pragma once
 
+#include "BypassRamp.h"
+
 #include <array>
 
 namespace nsdsp
@@ -62,6 +64,22 @@ public:
     void prepare (double sampleRate);
     void reset();
 
+    // Per block, before processBlock(). Engaging and bypassing are ~25 ms
+    // crossfades rather than hard switches, and so is a move to the other side
+    // of the neural model or a change of amplifier: the filter's state belongs
+    // to the point it was reading and the circuit it was modelling. See
+    // BypassRamp. `pre` is which side of the model this block runs on.
+    void setEngaged (bool engaged, bool pre);
+
+    // False = settled in bypass; processBlock() is a no-op and can be skipped.
+    bool isRunning() const { return ramp.isRunning(); }
+
+    // Which side of the model processBlock() must be called on *now*. During
+    // the fade-out half of a pre/post move this is still the old side: the
+    // state being faded out belongs to the signal it was reading, so that is
+    // where it has to be run.
+    bool runsPre() const { return activePre; }
+
     // model: one of Model, knobs in [0, 1]. levelComp folds in the per-model
     // makeup gain described above.
     void setParams (int model, float bass, float mid, float treble, bool levelComp = true);
@@ -98,6 +116,9 @@ private:
     // Per-model noon makeup, filled by prepare(). Index 0 (bypass) stays 1.
     std::array<double, numModels> makeup { {} };
     double appliedMakeup = 1.0;
+
+    BypassRamp ramp;
+    bool activePre = false;
 
     // direct form II transposed state
     double z1 = 0, z2 = 0, z3 = 0;
