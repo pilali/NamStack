@@ -465,6 +465,31 @@ Notes de portage utiles (découvertes en validant la cross-compilation) :
   (il casse le resampler Lanczos/WDL et la déduction de templates) — ne
   l'ajoutez pas aux drapeaux, même s'il figure dans d'autres recettes MOD.
 
+## Interfaces
+
+Les trois faces du plugin — l'éditeur JUCE, le modgui du bundle JUCE et le
+modgui de la variante MOD — sont **la même façade** : quatre sections dans le
+même ordre (**AMP**, **EQ**, **CAB**, **SPREAD**), séparées par le même filet
+fin coupé en son milieu par le nom de la section, les mêmes contrôles dans les
+mêmes cellules, la même palette et les mêmes formes de widgets.
+
+Côté JUCE, `src/NamStackLookAndFeel.h` redessine les potentiomètres, les
+interrupteurs et les curseurs à partir de la géométrie exacte des sprites du
+pédalier (`modgui/tools/generate_assets.py`), et les constantes de placement de
+`src/PluginEditor.cpp` sont celles de
+`mod/modgui/stylesheet-namstack-mod.css` : si l'une bouge, l'autre bouge.
+
+Trois cellules seules diffèrent, et par le widget, jamais par la position : le
+modèle de tone stack et les deux Pre/Post sont des listes déroulantes dans
+l'éditeur JUCE, là où le pédalier en fait un potentiomètre et deux
+interrupteurs à afficheur. Le pédalier procède ainsi pour qu'ils soient
+assignables à une commande matérielle ; un éditeur de bureau a une souris, et
+une liste de dix entrées est une liste. La cellule du tone stack est élargie en
+conséquence, ce qui est le seul écart à la grille régulière. L'éditeur JUCE
+ajoute par ailleurs deux choses que le pédalier n'a pas : la ligne
+d'information sous le sélecteur de modèle, et le grisage des potentiomètres
+Param 1 / Param 2 quand le modèle chargé n'est pas conditionné.
+
 ### modgui
 
 Chaque bundle embarque une interface web pour

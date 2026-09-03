@@ -85,38 +85,56 @@ juce::AudioProcessorValueTreeState::ParameterLayout NamStackAudioProcessor::crea
 
     auto id = [] (const juce::String& s) { return juce::ParameterID { s, 1 }; };
 
+    // Value readouts. JUCE derives the decimal count from the range's interval
+    // and falls back to seven digits when a range has none, which is every bare
+    // 0-1 knob here. Spelling the format out on the parameter fixes the plugin's
+    // own editor, the MOD readouts and the host's generic UI at once -- and
+    // without coarsening the range, which is what adding an interval would do.
+    auto readout = [] (int decimals, const char* label = nullptr)
+    {
+        auto attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction (
+            [decimals] (float v, int) { return juce::String (v, decimals); });
+        return label != nullptr ? attributes.withLabel (label) : attributes;
+    };
+
     params.push_back (std::make_unique<FloatParam> (
         id (ParamIDs::inputGain), "Input Gain",
-        juce::NormalisableRange<float> (-24.0f, 24.0f, 0.1f), 0.0f,
-        juce::AudioParameterFloatAttributes().withLabel ("dB")));
+        juce::NormalisableRange<float> (-24.0f, 24.0f, 0.1f), 0.0f, readout (1, "dB")));
     params.push_back (std::make_unique<FloatParam> (
         id (ParamIDs::outputGain), "Output Gain",
-        juce::NormalisableRange<float> (-24.0f, 24.0f, 0.1f), 0.0f,
-        juce::AudioParameterFloatAttributes().withLabel ("dB")));
+        juce::NormalisableRange<float> (-24.0f, 24.0f, 0.1f), 0.0f, readout (1, "dB")));
 
     params.push_back (std::make_unique<FloatParam> (id (ParamIDs::aidaParam1), "Model Param 1",
-                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));
+                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f,
+                                                    readout (2)));
     params.push_back (std::make_unique<FloatParam> (id (ParamIDs::aidaParam2), "Model Param 2",
-                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));
+                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f,
+                                                    readout (2)));
     params.push_back (std::make_unique<FloatParam> (id (ParamIDs::modelQuality), "Model Quality",
-                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 1.0f));
+                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 1.0f,
+                                                    readout (2)));
 
     juce::StringArray toneStackNames;
     for (const auto& m : nsdsp::ToneStack::getModels())
         toneStackNames.add (m.name);
 
-    const juce::StringArray positionNames { "Pre (before amp)", "Post (after amp)" };
+    // Short enough for the 80px Pre/Post cell of both UIs; the caption above
+    // it already says what the choice selects.
+    const juce::StringArray positionNames { "Pre", "Post" };
 
     params.push_back (std::make_unique<BoolParam> (id (ParamIDs::tsOn), "Tone Stack On", true));
     params.push_back (std::make_unique<ChoiceParam> (id (ParamIDs::tsModel), "Tone Stack", toneStackNames, 0));
     params.push_back (std::make_unique<ChoiceParam> (id (ParamIDs::tsPosition), "Tone Stack Position",
                                                      positionNames, 1));
     params.push_back (std::make_unique<FloatParam> (id (ParamIDs::tsBass), "Bass",
-                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));
+                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f,
+                                                    readout (2)));
     params.push_back (std::make_unique<FloatParam> (id (ParamIDs::tsMid), "Middle",
-                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));
+                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f,
+                                                    readout (2)));
     params.push_back (std::make_unique<FloatParam> (id (ParamIDs::tsTreble), "Treble",
-                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));
+                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f,
+                                                    readout (2)));
     // On by default: the passive circuit loses 4.6 to 13.1 dB at noon depending
     // on the model, which in a real amp the next gain stage makes up.
     params.push_back (std::make_unique<BoolParam> (id (ParamIDs::tsComp), "Tone Stack Level Comp", true));
@@ -135,8 +153,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout NamStackAudioProcessor::crea
         params.push_back (std::make_unique<FloatParam> (
             id (ParamIDs::geqBand (band, hz)),
             "EQ " + juce::String (juce::roundToInt (hz)) + " Hz",
-            juce::NormalisableRange<float> (-maxGain, maxGain, 0.1f), 0.0f,
-            juce::AudioParameterFloatAttributes().withLabel ("dB")));
+            juce::NormalisableRange<float> (-maxGain, maxGain, 0.1f), 0.0f, readout (1, "dB")));
     }
 
     for (int i = 0; i < nsdsp::IRStack::numSlots; ++i)
@@ -145,10 +162,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout NamStackAudioProcessor::crea
         params.push_back (std::make_unique<BoolParam> (id (ParamIDs::irOn (i)), "IR " + n + " On", false));
         params.push_back (std::make_unique<FloatParam> (
             id (ParamIDs::irGain (i)), "IR " + n + " Level",
-            juce::NormalisableRange<float> (-40.0f, 12.0f, 0.1f), 0.0f,
-            juce::AudioParameterFloatAttributes().withLabel ("dB")));
+            juce::NormalisableRange<float> (-40.0f, 12.0f, 0.1f), 0.0f, readout (1, "dB")));
         params.push_back (std::make_unique<FloatParam> (id (ParamIDs::irPan (i)), "IR " + n + " Pan",
-                                                        juce::NormalisableRange<float> (-1.0f, 1.0f), 0.0f));
+                                                        juce::NormalisableRange<float> (-1.0f, 1.0f), 0.0f,
+                                                        readout (2)));
     }
 
     // Spread: one musical control (the signed Offset), plus the deck sections.
@@ -159,9 +176,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout NamStackAudioProcessor::crea
     params.push_back (std::make_unique<FloatParam> (
         id (ParamIDs::sprOffset), "Spread Offset",
         juce::NormalisableRange<float> (-nsdsp::Spread::maxOffsetMs, nsdsp::Spread::maxOffsetMs, 0.01f),
-        15.0f, juce::AudioParameterFloatAttributes().withLabel ("ms")));
+        15.0f, readout (1, "ms")));
     params.push_back (std::make_unique<FloatParam> (id (ParamIDs::sprWobble), "Spread Wobble",
-                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.25f));
+                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.25f,
+                                                    readout (2)));
     params.push_back (std::make_unique<BoolParam> (id (ParamIDs::sprWobbleOn), "Spread Wobble On", true));
     // Log-ish map skewed so the 130 Hz default lands exactly at the knob's
     // centre (32.5 * 16^0.5 = 130: 4x per half turn).
@@ -170,8 +188,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout NamStackAudioProcessor::crea
     crossoverRange.setSkewForCentre (nsdsp::Spread::defaultCrossoverHz);
     params.push_back (std::make_unique<FloatParam> (
         id (ParamIDs::sprCrossover), "Spread Crossover", crossoverRange,
-        nsdsp::Spread::defaultCrossoverHz,
-        juce::AudioParameterFloatAttributes().withLabel ("Hz")));
+        nsdsp::Spread::defaultCrossoverHz, readout (0, "Hz")));
     params.push_back (std::make_unique<BoolParam> (id (ParamIDs::sprCrossoverOn), "Spread Crossover On", true));
     params.push_back (std::make_unique<BoolParam> (id (ParamIDs::sprDiffuseOn), "Spread Diffuse On", true));
 

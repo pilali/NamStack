@@ -168,8 +168,8 @@ the end of the chain.
 		lv2:minimum 0 ;
 		lv2:maximum 1 ;
 		lv2:portProperty lv2:integer , lv2:enumeration ;
-		lv2:scalePoint [ rdfs:label "Pre (before amp)" ; rdf:value 0 ] ,
-		               [ rdfs:label "Post (after amp)" ; rdf:value 1 ] ;
+		lv2:scalePoint [ rdfs:label "Pre" ; rdf:value 0 ] ,
+		               [ rdfs:label "Post" ; rdf:value 1 ] ;
 	] , [
 		a lv2:ControlPort , lv2:InputPort ;
 		lv2:index 11 ;
@@ -403,8 +403,8 @@ the end of the chain.
 		lv2:minimum 0 ;
 		lv2:maximum 1 ;
 		lv2:portProperty lv2:integer , lv2:enumeration ;
-		lv2:scalePoint [ rdfs:label "Pre (before amp)" ; rdf:value 0 ] ,
-		               [ rdfs:label "Post (after amp)" ; rdf:value 1 ] ;
+		lv2:scalePoint [ rdfs:label "Pre" ; rdf:value 0 ] ,
+		               [ rdfs:label "Post" ; rdf:value 1 ] ;
 	] , [
 		a lv2:ControlPort , lv2:InputPort ;
 		lv2:index 37 ;
