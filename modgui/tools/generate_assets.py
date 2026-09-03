@@ -195,18 +195,20 @@ ROW1_TOP, ROW2_TOP = 74, 204  # top of each control block (label line)
 EQ_ROW_TOP = 322
 LABEL_H, VALUE_H = 16, 16
 
-ROW1 = ["INPUT", "STACK", "STACK ON", "PRE/POST", "BASS", "MIDDLE", "TREBLE",
-        "PARAM 1", "PARAM 2", "OUTPUT"]
-ROW1_SWITCH = {2, 3}
-ROW1_VALUES = {0: "0.0 dB", 4: "0.50", 5: "0.50", 6: "0.50", 7: "0.50", 8: "0.50",
-               9: "0.0 dB"}
-ROW2 = ["IR 1", "IR 2", "IR 3", "IR 4", "DOUBLER", "MIX", "TIME", "WIDTH"]
-ROW2_SWITCH = {4}
-ROW2_VALUES = {0: "0.0 dB", 1: "0.0 dB", 2: "0.0 dB", 3: "0.0 dB", 5: "0.50", 6: "18 ms", 7: "1.00"}
+# The desktop pedal runs on a tighter 80px cell than the MOD one: both rows
+# are eleven cells wide (CSS .namstack .ns-ctrl).
+DESKTOP_BLOCK_W = 80
 
-# The MOD variant adds the slimmable-model quality knob on the second row.
-ROW2_MOD = ROW2 + ["QUALITY"]
-ROW2_MOD_VALUES = {**ROW2_VALUES, 8: "1.00"}
+ROW1 = ["INPUT", "STACK", "STACK ON", "PRE/POST", "BASS", "MIDDLE", "TREBLE",
+        "LEVEL COMP", "PARAM 1", "PARAM 2", "OUTPUT"]
+ROW1_SWITCH = {2, 3, 7}
+ROW1_VALUES = {0: "0.0 dB", 4: "0.50", 5: "0.50", 6: "0.50", 8: "0.50", 9: "0.50",
+               10: "0.0 dB"}
+ROW2 = ["IR 1", "IR 2", "IR 3", "IR 4", "SPREAD", "OFFSET", "WOBBLE", "WOBBLE ON",
+        "CROSSOVER", "X-OVER ON", "DIFFUSE"]
+ROW2_SWITCH = {4, 7, 9, 10}
+ROW2_VALUES = {0: "0.0 dB", 1: "0.0 dB", 2: "0.0 dB", 3: "0.0 dB",
+               5: "15.0 ms", 6: "0.25", 8: "130 Hz"}
 
 # 5-band graphic EQ row: two switches then the five faders (CSS .ns-ctrl-fader).
 EQ_SWITCHES = ["EQ ON", "EQ PRE/POST"]
@@ -217,15 +219,15 @@ FADER_BLOCK_W = 72
 def draw_eq_row(img, draw, top, label_font, value_font):
     """The graphic-EQ row: two switches, then five faders sitting at 0 dB."""
     for i, label in enumerate(EQ_SWITCHES):
-        bx = ROW_X + i * BLOCK_W
-        cx = (bx + BLOCK_W / 2) * SS
+        bx = ROW_X + i * DESKTOP_BLOCK_W
+        cx = (bx + DESKTOP_BLOCK_W / 2) * SS
         draw.text((cx, (top + LABEL_H / 2) * SS), label, font=label_font, fill=TEXT, anchor="mm")
         ky = top + LABEL_H + 2
         sw = Image.new("RGBA", (KNOB * SS, KNOB * SS), (0, 0, 0, 0))
         draw_switch_frame(ImageDraw.Draw(sw), 0, KNOB, on=False)
         img.alpha_composite(sw, (int(cx - KNOB / 2 * SS), ky * SS))
 
-    fader_x0 = ROW_X + len(EQ_SWITCHES) * BLOCK_W
+    fader_x0 = ROW_X + len(EQ_SWITCHES) * DESKTOP_BLOCK_W
     for i, label in enumerate(EQ_BANDS):
         bx = fader_x0 + i * FADER_BLOCK_W
         cx = (bx + FADER_BLOCK_W / 2) * SS
@@ -269,14 +271,14 @@ def make_screenshot():
     value_font = font(10 * SS)
 
     draw.text((24 * SS, 12 * SS), "NamStack", font=title_font, fill=AMBER)
-    draw.text((190 * SS, 26 * SS), "NAM · AIDA-X · TONE STACK · 5-BAND EQ · IR MIXER · DOUBLER",
+    draw.text((190 * SS, 26 * SS), "NAM · AIDA-X · TONE STACK · 5-BAND EQ · IR MIXER · SPREAD",
               font=sub_font, fill=TEXT_DIM)
     draw.text((PEDAL_W * SS - 24 * SS, 26 * SS), "Pilali", font=sub_font, fill=TEXT_DIM, anchor="ra")
 
     def draw_row(labels, switches, values, top):
         for i, label in enumerate(labels):
-            bx = ROW_X + i * BLOCK_W
-            cx = (bx + BLOCK_W / 2) * SS
+            bx = ROW_X + i * DESKTOP_BLOCK_W
+            cx = (bx + DESKTOP_BLOCK_W / 2) * SS
             draw.text((cx, (top + LABEL_H / 2) * SS), label, font=label_font, fill=TEXT, anchor="mm")
             ky = top + LABEL_H + 2
             if i in switches:
@@ -311,7 +313,9 @@ def make_screenshot_mod():
     """Screenshot of the MOD (plain LV2) variant, in signal-flow reading order
     on a 88px grid: model + quality + gain staging, all the EQ on one line
     (tone stack then graphic EQ), IR mixer (selector above each slot's
-    on/level/pan), doubler. Mirrors mod/modgui/stylesheet-namstack-mod.css."""
+    on/level/pan), spread. The EQ line alone runs on a tighter 80/68px grid --
+    nine tone-stack cells plus five faders do not fit the 88/72 one inside the
+    1064px inner width. Mirrors mod/modgui/stylesheet-namstack-mod.css."""
     global PEDAL_W, PEDAL_H
     saved_w, saved_h = PEDAL_W, PEDAL_H
     PEDAL_W, PEDAL_H = 1120, 624
@@ -328,7 +332,7 @@ def make_screenshot_mod():
     draw.text((24 * SS, baseline), "NamStack", font=title_font, fill=AMBER, anchor="ls")
     title_w = draw.textlength("NamStack", font=title_font)
     draw.text((24 * SS + title_w + 24 * SS, baseline),
-              "NAM · AIDA-X · TONE STACK · 5-BAND EQ · IR MIXER · DOUBLER",
+              "NAM · AIDA-X · TONE STACK · 5-BAND EQ · IR MIXER · SPREAD",
               font=sub_font, fill=TEXT_DIM, anchor="ls")
     draw.text((PEDAL_W * SS - 24 * SS, baseline), "Pilali", font=sub_font, fill=TEXT_DIM, anchor="rs")
 
@@ -374,12 +378,13 @@ def make_screenshot_mod():
     # row 2, all the EQ on one line (CSS .ns-row-eq: top 190, left 28): the
     # tone stack, then the graphic EQ switches and faders
     draw_section(170, "E Q")
+    eq_block_w, eq_fader_w = 80, 68  # CSS .ns-row-eq .ns-ctrl / .ns-ctrl-fader
     draw_row(["STACK", "STACK ON", "PRE/POST", "BASS", "MIDDLE", "TREBLE",
-              "EQ ON", "EQ PRE/POST"], {1, 2, 6, 7},
-             {3: "0.50", 4: "0.50", 5: "0.50"}, 190, x0=28)
-    fader_x0 = 28 + 8 * BLOCK_W
+              "LEVEL COMP", "EQ ON", "EQ PRE/POST"], {1, 2, 6, 7, 8},
+             {3: "0.50", 4: "0.50", 5: "0.50"}, 190, x0=30, block_w=eq_block_w)
+    fader_x0 = 30 + 9 * eq_block_w
     for i, label in enumerate(EQ_BANDS):
-        cx = (fader_x0 + i * FADER_BLOCK_W + FADER_BLOCK_W / 2) * SS
+        cx = (fader_x0 + i * eq_fader_w + eq_fader_w / 2) * SS
         draw.text((cx, (190 + LABEL_H / 2) * SS), label, font=label_font, fill=TEXT, anchor="mm")
         fy = 190 + LABEL_H + 2
         fd = Image.new("RGBA", (FADER_W * SS, FADER_H * SS), (0, 0, 0, 0))
@@ -396,10 +401,11 @@ def make_screenshot_mod():
     draw_row(["ON", "LEVEL", "PAN"] * 4, {0, 3, 6, 9},
              {i: ("0.0 dB" if i % 3 == 1 else "0.00") for i in range(12) if i % 3}, 392, x0=32)
 
-    # row 4, the whole doubler (CSS .ns-row-dbl: top 512, left 296)
-    draw_section(492, "D O U B L E R")
-    draw_row(["DOUBLER", "MIX", "TIME", "DETUNE", "HUMANIZE", "WIDTH"], {0},
-             {1: "0.50", 2: "18 ms", 3: "9.0 ct", 4: "0.30", 5: "1.00"}, 512, x0=296)
+    # row 4, the whole stereo image (CSS .ns-row-spr: top 512, left 252)
+    draw_section(492, "S P R E A D")
+    draw_row(["SPREAD", "OFFSET", "WOBBLE", "WOBBLE ON", "CROSSOVER",
+              "X-OVER ON", "DIFFUSE"], {0, 3, 5, 6},
+             {1: "15.0 ms", 2: "0.25", 4: "130 Hz"}, 512, x0=252)
 
     # footswitch + led (CSS: fsw 1040/568 48px, led 1057/544 14px)
     fx, fy = 1064, 592

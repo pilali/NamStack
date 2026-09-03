@@ -99,7 +99,7 @@ add_library(namstack_core STATIC
     src/dsp/NamArchitectures.cpp
     src/dsp/ToneStack.cpp
     src/dsp/GraphicEQ.cpp
-    src/dsp/Doubler.cpp)
+    src/dsp/Spread.cpp)
 
 target_include_directories(namstack_core PUBLIC src)
 target_link_libraries(namstack_core PUBLIC nam_core RTNeural)

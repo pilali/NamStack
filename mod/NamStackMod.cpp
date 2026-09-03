@@ -23,7 +23,7 @@
 #include "core/Convolver.h"
 #include "core/IRLoader.h"
 #include "core/IRMixer.h"
-#include "dsp/Doubler.h"
+#include "dsp/Spread.h"
 #include "dsp/NeuralModel.h"
 #include "dsp/GraphicEQ.h"
 #include "dsp/ToneStack.h"
@@ -83,12 +83,17 @@ enum PortIndex
     kPortIr4On,
     kPortIr4Gain,
     kPortIr4Pan,
-    kPortDblOn,
-    kPortDblMix,
-    kPortDblTime,
-    kPortDblDetune,
-    kPortDblHumanize,
-    kPortDblWidth,
+    // The doubler these six indices used to carry was replaced by Spread (an
+    // ADT-style image, see dsp/Spread.h). Its controls have no counterpart --
+    // there is no Mix, Detune or Humanize in the new engine -- so the indices
+    // are reused rather than kept as dead ports; the .ttl is the contract and
+    // it changed with them.
+    kPortSprOn,
+    kPortSprOffset,
+    kPortSprWobble,
+    kPortSprWobbleOn,
+    kPortSprCrossover,
+    kPortSprCrossoverOn,
     kPortOutGain,
     kPortQuality,
     // Appended after kPortQuality on purpose: LV2 identifies control ports by
@@ -102,6 +107,8 @@ enum PortIndex
     kPortGeqBand3, // 750 Hz
     kPortGeqBand4, // 2200 Hz
     kPortGeqBand5, // 6600 Hz
+    kPortSprDiffuseOn, // seventh spread control; six fit in the old doubler block
+    kPortTsComp,
     kPortCount
 };
 
@@ -192,7 +199,7 @@ struct NamStackMod
     nsdsp::ToneStack toneStack;
     nsdsp::GraphicEQ graphicEq;
     nsdsp::IRMixer irMixer;
-    nsdsp::Doubler doubler;
+    nsdsp::Spread spread;
 
     std::vector<float> mono, busL, busR;
 
@@ -225,7 +232,7 @@ void prepareDsp (NamStackMod* self)
     self->toneStack.prepare (self->sampleRate);
     self->graphicEq.prepare (self->sampleRate);
     self->irMixer.prepare (self->sampleRate, self->partitionSize, std::max (self->maxBlockSize, kMaxChunk));
-    self->doubler.prepare (self->sampleRate, self->maxBlockSize);
+    self->spread.prepare (self->sampleRate, self->maxBlockSize);
 
     self->mono.assign ((size_t) kMaxChunk, 0.0f);
     self->busL.assign ((size_t) kMaxChunk, 0.0f);
@@ -565,7 +572,7 @@ void activate (LV2_Handle instance)
     self->toneStack.reset();
     self->graphicEq.reset();
     self->irMixer.reset();
-    self->doubler.reset();
+    self->spread.reset();
     self->activated = true;
 }
 
@@ -645,7 +652,8 @@ void run (LV2_Handle instance, uint32_t nSamples)
     self->toneStack.setParams ((int) param (self, kPortTsModel),
                                param (self, kPortTsBass, 0.5f),
                                param (self, kPortTsMid, 0.5f),
-                               param (self, kPortTsTreble, 0.5f));
+                               param (self, kPortTsTreble, 0.5f),
+                               param (self, kPortTsComp, 1.0f) > 0.5f);
     const bool tsIsPre = param (self, kPortTsPosition) < 0.5f;
     const bool tsOn = param (self, kPortTsOn, 1.0f) > 0.5f;
 
@@ -663,12 +671,17 @@ void run (LV2_Handle instance, uint32_t nSamples)
                                      param (self, (PortIndex) (kPortIr1Gain + slot * 3)),
                                      param (self, (PortIndex) (kPortIr1Pan + slot * 3)));
 
-    self->doubler.setParams (param (self, kPortDblOn) > 0.5f,
-                             param (self, kPortDblTime, 18.0f),
-                             param (self, kPortDblDetune, 9.0f),
-                             param (self, kPortDblHumanize, 0.3f),
-                             param (self, kPortDblWidth, 1.0f),
-                             param (self, kPortDblMix, 0.5f));
+    {
+        nsdsp::Spread::Params sp;
+        sp.offsetMs = param (self, kPortSprOffset, 15.0f);
+        sp.wobbleDepth = param (self, kPortSprWobbleOn, 1.0f) > 0.5f
+                             ? param (self, kPortSprWobble, 0.25f)
+                             : 0.0f;
+        sp.crossoverHz = param (self, kPortSprCrossover, nsdsp::Spread::defaultCrossoverHz);
+        sp.crossoverOn = param (self, kPortSprCrossoverOn, 1.0f) > 0.5f;
+        sp.diffuseOn = param (self, kPortSprDiffuseOn, 1.0f) > 0.5f;
+        self->spread.setParams (param (self, kPortSprOn) > 0.5f, sp);
+    }
 
     if (self->model != nullptr)
         self->model->setConditioning (param (self, kPortAidaParam1, 0.5f),
@@ -726,7 +739,8 @@ void run (LV2_Handle instance, uint32_t nSamples)
 
         self->irMixer.process (mono, self->busL.data(), self->busR.data(), n);
 
-        self->doubler.process (self->busL.data(), self->busR.data(), n);
+        if (self->spread.isRunning())
+            self->spread.process (self->busL.data(), self->busR.data(), n);
 
         for (int i = 0; i < n; ++i)
         {

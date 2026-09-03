@@ -1,4 +1,10 @@
-/* NamStack modgui — layout mirrored by modgui/tools/generate_assets.py */
+/* NamStack modgui — layout mirrored by modgui/tools/generate_assets.py
+
+   Three rows of 80px control cells inside the 960px panel (22px margin, so
+   eleven cells reach 902px). 80 rather than 88 because both the amp row (the
+   tone stack gained its level-compensation switch) and the effects row (the
+   doubler became Spread, which carries three section switches) now run eleven
+   cells wide. */
 
 .namstack{{{cns}}} {
     position: absolute;
@@ -62,7 +68,7 @@
 .namstack{{{cns}}} .ns-row-eq  { top: 322px; }
 
 .namstack{{{cns}}} .ns-ctrl {
-    width: 88px;
+    width: 80px;
     text-align: center;
 }
 

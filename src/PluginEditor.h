@@ -28,7 +28,7 @@ private:
     using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
 
     // Group titles mirror the MOD pedal's section rules: AMP / EQ / CAB /
-    // DOUBLER, in the same order and with the same row contents.
+    // SPREAD, in the same order and with the same row contents.
 
     // ------------------------------------------------------------ amp model
     juce::GroupComponent ampGroup { {}, "AMP" };
@@ -51,10 +51,11 @@ private:
     // -------------------------------------------- EQ: tone stack + graphic
     juce::GroupComponent eqGroup { {}, "EQ" };
     juce::ToggleButton toneOnButton { "Stack On" };
+    juce::ToggleButton toneCompButton { "Level Comp" };
     juce::ComboBox toneStackBox, tonePositionBox;
     juce::Slider bassSlider, midSlider, trebleSlider;
     juce::Label bassLabel { {}, "Bass" }, midLabel { {}, "Middle" }, trebleLabel { {}, "Treble" };
-    std::unique_ptr<ButtonAttachment> toneOnAttachment;
+    std::unique_ptr<ButtonAttachment> toneOnAttachment, toneCompAttachment;
     std::unique_ptr<ComboAttachment> toneStackAttachment, tonePositionAttachment;
     std::unique_ptr<SliderAttachment> bassAttachment, midAttachment, trebleAttachment;
 
@@ -85,20 +86,28 @@ private:
 
     IRRow irRows[nsdsp::IRStack::numSlots];
 
-    // --------------------------------------------------------------- doubler
-    juce::GroupComponent doublerGroup { {}, "DOUBLER" };
-    juce::ToggleButton doublerOnButton { "On" };
-    juce::Slider doublerMixSlider, doublerTimeSlider, doublerDetuneSlider,
-                 doublerHumanizeSlider, doublerWidthSlider;
-    juce::Label doublerMixLabel { {}, "Mix" }, doublerTimeLabel { {}, "Time" },
-                doublerDetuneLabel { {}, "Detune" }, doublerHumanizeLabel { {}, "Humanize" },
-                doublerWidthLabel { {}, "Width" };
-    std::unique_ptr<ButtonAttachment> doublerOnAttachment;
-    std::unique_ptr<SliderAttachment> doublerMixAttachment, doublerTimeAttachment,
-                                      doublerDetuneAttachment, doublerHumanizeAttachment,
-                                      doublerWidthAttachment;
+    // ---------------------------------------------------------------- spread
+    // One musical knob (the signed Offset) plus the deck: Wobble depth and its
+    // power, the crossover cutoff and its power, and the diffuser's power.
+    juce::GroupComponent spreadGroup { {}, "SPREAD" };
+    juce::ToggleButton spreadOnButton { "On" };
+    juce::ToggleButton spreadWobbleOnButton { "Wobble" };
+    juce::ToggleButton spreadCrossoverOnButton { "X-over" };
+    juce::ToggleButton spreadDiffuseOnButton { "Diffuse" };
+    juce::Slider spreadOffsetSlider, spreadWobbleSlider, spreadCrossoverSlider;
+    juce::Label spreadOffsetLabel { {}, "Offset" }, spreadWobbleLabel { {}, "Wobble" },
+                spreadCrossoverLabel { {}, "Crossover" };
+    std::unique_ptr<ButtonAttachment> spreadOnAttachment, spreadWobbleOnAttachment,
+                                      spreadCrossoverOnAttachment, spreadDiffuseOnAttachment;
+    std::unique_ptr<SliderAttachment> spreadOffsetAttachment, spreadWobbleAttachment,
+                                      spreadCrossoverAttachment;
 
     std::unique_ptr<juce::FileChooser> fileChooser;
+
+    // Several switches here gate a section rather than an effect (Level Comp,
+    // the three Spread deck powers); without a tooltip window their setTooltip
+    // calls would be dead code.
+    juce::TooltipWindow tooltips { this, 600 };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NamStackAudioProcessorEditor)
 };

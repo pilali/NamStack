@@ -34,6 +34,7 @@ NamStackAudioProcessor::NamStackAudioProcessor()
     pTsBass = apvts.getRawParameterValue (ParamIDs::tsBass);
     pTsMid = apvts.getRawParameterValue (ParamIDs::tsMid);
     pTsTreble = apvts.getRawParameterValue (ParamIDs::tsTreble);
+    pTsComp = apvts.getRawParameterValue (ParamIDs::tsComp);
 
     for (int i = 0; i < nsdsp::IRStack::numSlots; ++i)
     {
@@ -44,12 +45,13 @@ NamStackAudioProcessor::NamStackAudioProcessor()
 
     apvts.addParameterListener (ParamIDs::modelQuality, this);
 
-    pDblOn = apvts.getRawParameterValue (ParamIDs::dblOn);
-    pDblMix = apvts.getRawParameterValue (ParamIDs::dblMix);
-    pDblTime = apvts.getRawParameterValue (ParamIDs::dblTime);
-    pDblDetune = apvts.getRawParameterValue (ParamIDs::dblDetune);
-    pDblHumanize = apvts.getRawParameterValue (ParamIDs::dblHumanize);
-    pDblWidth = apvts.getRawParameterValue (ParamIDs::dblWidth);
+    pSprOn = apvts.getRawParameterValue (ParamIDs::sprOn);
+    pSprOffset = apvts.getRawParameterValue (ParamIDs::sprOffset);
+    pSprWobble = apvts.getRawParameterValue (ParamIDs::sprWobble);
+    pSprWobbleOn = apvts.getRawParameterValue (ParamIDs::sprWobbleOn);
+    pSprCrossover = apvts.getRawParameterValue (ParamIDs::sprCrossover);
+    pSprCrossoverOn = apvts.getRawParameterValue (ParamIDs::sprCrossoverOn);
+    pSprDiffuseOn = apvts.getRawParameterValue (ParamIDs::sprDiffuseOn);
 }
 
 NamStackAudioProcessor::~NamStackAudioProcessor()
@@ -115,6 +117,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout NamStackAudioProcessor::crea
                                                     juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));
     params.push_back (std::make_unique<FloatParam> (id (ParamIDs::tsTreble), "Treble",
                                                     juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));
+    // On by default: the passive circuit loses 4.6 to 13.1 dB at noon depending
+    // on the model, which in a real amp the next gain stage makes up.
+    params.push_back (std::make_unique<BoolParam> (id (ParamIDs::tsComp), "Tone Stack Level Comp", true));
 
     // 5-band graphic EQ (Mesa/Boogie Mark voicing). Its position is independent
     // of the tone stack's; when both land on the same side of the neural model,
@@ -146,21 +151,29 @@ juce::AudioProcessorValueTreeState::ParameterLayout NamStackAudioProcessor::crea
                                                         juce::NormalisableRange<float> (-1.0f, 1.0f), 0.0f));
     }
 
-    params.push_back (std::make_unique<BoolParam> (id (ParamIDs::dblOn), "Doubler On", false));
-    params.push_back (std::make_unique<FloatParam> (id (ParamIDs::dblMix), "Doubler Mix",
-                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.5f));
+    // Spread: one musical control (the signed Offset), plus the deck sections.
+    // Defaults land a tight classic ADT (+15 ms on the right, 25 % wobble) so
+    // switching it on is audible immediately, and every deck switch defaults on
+    // because the deck *is* the sound -- the switches only expose its sections.
+    params.push_back (std::make_unique<BoolParam> (id (ParamIDs::sprOn), "Spread On", false));
     params.push_back (std::make_unique<FloatParam> (
-        id (ParamIDs::dblTime), "Doubler Time",
-        juce::NormalisableRange<float> (5.0f, 50.0f, 0.1f), 18.0f,
-        juce::AudioParameterFloatAttributes().withLabel ("ms")));
+        id (ParamIDs::sprOffset), "Spread Offset",
+        juce::NormalisableRange<float> (-nsdsp::Spread::maxOffsetMs, nsdsp::Spread::maxOffsetMs, 0.01f),
+        15.0f, juce::AudioParameterFloatAttributes().withLabel ("ms")));
+    params.push_back (std::make_unique<FloatParam> (id (ParamIDs::sprWobble), "Spread Wobble",
+                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.25f));
+    params.push_back (std::make_unique<BoolParam> (id (ParamIDs::sprWobbleOn), "Spread Wobble On", true));
+    // Log-ish map skewed so the 130 Hz default lands exactly at the knob's
+    // centre (32.5 * 16^0.5 = 130: 4x per half turn).
+    auto crossoverRange = juce::NormalisableRange<float> (nsdsp::Spread::minCrossoverHz,
+                                                          nsdsp::Spread::maxCrossoverHz, 0.1f);
+    crossoverRange.setSkewForCentre (nsdsp::Spread::defaultCrossoverHz);
     params.push_back (std::make_unique<FloatParam> (
-        id (ParamIDs::dblDetune), "Doubler Detune",
-        juce::NormalisableRange<float> (0.0f, 25.0f, 0.1f), 9.0f,
-        juce::AudioParameterFloatAttributes().withLabel ("ct")));
-    params.push_back (std::make_unique<FloatParam> (id (ParamIDs::dblHumanize), "Doubler Humanize",
-                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 0.3f));
-    params.push_back (std::make_unique<FloatParam> (id (ParamIDs::dblWidth), "Doubler Width",
-                                                    juce::NormalisableRange<float> (0.0f, 1.0f), 1.0f));
+        id (ParamIDs::sprCrossover), "Spread Crossover", crossoverRange,
+        nsdsp::Spread::defaultCrossoverHz,
+        juce::AudioParameterFloatAttributes().withLabel ("Hz")));
+    params.push_back (std::make_unique<BoolParam> (id (ParamIDs::sprCrossoverOn), "Spread Crossover On", true));
+    params.push_back (std::make_unique<BoolParam> (id (ParamIDs::sprDiffuseOn), "Spread Diffuse On", true));
 
     return { params.begin(), params.end() };
 }
@@ -190,7 +203,7 @@ void NamStackAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
     toneStack.prepare (sampleRate);
     graphicEq.prepare (sampleRate);
     irStack.prepare ({ sampleRate, (juce::uint32) samplesPerBlock, 1 });
-    doubler.prepare (sampleRate, samplesPerBlock);
+    spread.prepare (sampleRate, samplesPerBlock);
 
     {
         const juce::SpinLock::ScopedLockType sl (modelLock);
@@ -205,7 +218,7 @@ void NamStackAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
 void NamStackAudioProcessor::releaseResources()
 {
     irStack.reset();
-    doubler.reset();
+    spread.reset();
     toneStack.reset();
     graphicEq.reset();
 }
@@ -259,7 +272,8 @@ void NamStackAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     const auto tsModelIndex = (int) pTsModel->load();
     const bool tsIsPre = ((int) pTsPosition->load()) == 0;
     const bool tsOn = pTsOn->load() > 0.5f;
-    toneStack.setParams (tsModelIndex, pTsBass->load(), pTsMid->load(), pTsTreble->load());
+    toneStack.setParams (tsModelIndex, pTsBass->load(), pTsMid->load(), pTsTreble->load(),
+                         pTsComp->load() > 0.5f);
 
     float geqGains[nsdsp::GraphicEQ::numBands];
     for (int band = 0; band < nsdsp::GraphicEQ::numBands; ++band)
@@ -296,14 +310,24 @@ void NamStackAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
 
     irStack.process (mono, stereoBuffer, numSamples);
 
-    // ------------------------------------------------------------- doubler
-    doubler.setParams (pDblOn->load() > 0.5f,
-                       pDblTime->load(),
-                       pDblDetune->load(),
-                       pDblHumanize->load(),
-                       pDblWidth->load(),
-                       pDblMix->load());
-    doubler.process (stereoBuffer.getWritePointer (0), stereoBuffer.getWritePointer (1), numSamples);
+    // -------------------------------------------------------------- spread
+    // Only meaningful with two output channels; on a mono bus the engine is
+    // held idle so the output stays the plain chain rather than a half-heard
+    // double summed back on itself. The parameter keeps its value, so a preset
+    // saved with spread on comes back alive on a stereo bus.
+    {
+        nsdsp::Spread::Params sp;
+        sp.offsetMs = pSprOffset->load();
+        sp.wobbleDepth = pSprWobbleOn->load() > 0.5f ? pSprWobble->load() : 0.0f;
+        sp.crossoverHz = pSprCrossover->load();
+        sp.crossoverOn = pSprCrossoverOn->load() > 0.5f;
+        sp.diffuseOn = pSprDiffuseOn->load() > 0.5f;
+
+        spread.setParams (numOut >= 2 && pSprOn->load() > 0.5f, sp);
+        if (spread.isRunning())
+            spread.process (stereoBuffer.getWritePointer (0), stereoBuffer.getWritePointer (1),
+                            numSamples);
+    }
 
     // --------------------------------------------------------- output gain
     outputGain.setTargetValue (juce::Decibels::decibelsToGain (pOutGain->load()));

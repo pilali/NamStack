@@ -67,10 +67,16 @@ NamStackAudioProcessorEditor::NamStackAudioProcessorEditor (NamStackAudioProcess
     // -------------------------------------------- EQ: tone stack + graphic
     addAndMakeVisible (eqGroup);
     addAndMakeVisible (toneOnButton);
+    addAndMakeVisible (toneCompButton);
     addAndMakeVisible (toneStackBox);
     addAndMakeVisible (tonePositionBox);
 
     toneOnAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::tsOn, toneOnButton);
+    // The passive circuit is lossy by nature; this puts every model's noon
+    // setting back at unity so the on/off switch stops being a volume control.
+    toneCompButton.setTooltip ("Compensates the passive stack's insertion loss: "
+                               "noon = 0 dB on every model");
+    toneCompAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::tsComp, toneCompButton);
 
     if (auto* choice = dynamic_cast<juce::AudioParameterChoice*> (apvts.getParameter (ParamIDs::tsModel)))
         toneStackBox.addItemList (choice->choices, 1);
@@ -154,12 +160,36 @@ NamStackAudioProcessorEditor::NamStackAudioProcessorEditor (NamStackAudioProcess
         row.panAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::irPan (i), row.panSlider);
     }
 
-    // --------------------------------------------------------------- doubler
-    addAndMakeVisible (doublerGroup);
-    addAndMakeVisible (doublerOnButton);
-    doublerOnAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::dblOn, doublerOnButton);
+    // ---------------------------------------------------------------- spread
+    addAndMakeVisible (spreadGroup);
 
-    struct DoublerControl
+    struct SpreadSwitch
+    {
+        juce::ToggleButton* button;
+        const char* paramID;
+        std::unique_ptr<ButtonAttachment>* attachment;
+        const char* tooltip;
+    };
+
+    const SpreadSwitch spreadSwitches[] = {
+        { &spreadOnButton, ParamIDs::sprOn, &spreadOnAttachment,
+          "ADT-style stereo image: one side dry, the other a wobbling late copy" },
+        { &spreadWobbleOnButton, ParamIDs::sprWobbleOn, &spreadWobbleOnAttachment,
+          "Random-walk drift of the delay time -- what makes the copy read as a second take" },
+        { &spreadCrossoverOnButton, ParamIDs::sprCrossoverOn, &spreadCrossoverOnAttachment,
+          "Keeps everything under the cutoff out of the delay, so the lows stay mono-safe" },
+        { &spreadDiffuseOnButton, ParamIDs::sprDiffuseOn, &spreadDiffuseOnAttachment,
+          "Allpass cascade on the late side: decorrelates phase without touching magnitude" },
+    };
+
+    for (const auto& sw : spreadSwitches)
+    {
+        addAndMakeVisible (*sw.button);
+        sw.button->setTooltip (sw.tooltip);
+        *sw.attachment = std::make_unique<ButtonAttachment> (apvts, sw.paramID, *sw.button);
+    }
+
+    struct SpreadControl
     {
         juce::Slider* slider;
         juce::Label* label;
@@ -167,15 +197,13 @@ NamStackAudioProcessorEditor::NamStackAudioProcessorEditor (NamStackAudioProcess
         std::unique_ptr<SliderAttachment>* attachment;
     };
 
-    DoublerControl doublerControls[] = {
-        { &doublerMixSlider, &doublerMixLabel, ParamIDs::dblMix, &doublerMixAttachment },
-        { &doublerTimeSlider, &doublerTimeLabel, ParamIDs::dblTime, &doublerTimeAttachment },
-        { &doublerDetuneSlider, &doublerDetuneLabel, ParamIDs::dblDetune, &doublerDetuneAttachment },
-        { &doublerHumanizeSlider, &doublerHumanizeLabel, ParamIDs::dblHumanize, &doublerHumanizeAttachment },
-        { &doublerWidthSlider, &doublerWidthLabel, ParamIDs::dblWidth, &doublerWidthAttachment },
+    const SpreadControl spreadControls[] = {
+        { &spreadOffsetSlider, &spreadOffsetLabel, ParamIDs::sprOffset, &spreadOffsetAttachment },
+        { &spreadWobbleSlider, &spreadWobbleLabel, ParamIDs::sprWobble, &spreadWobbleAttachment },
+        { &spreadCrossoverSlider, &spreadCrossoverLabel, ParamIDs::sprCrossover, &spreadCrossoverAttachment },
     };
 
-    for (auto& control : doublerControls)
+    for (const auto& control : spreadControls)
     {
         setupRotary (*control.slider);
         setupCaption (*control.label);
@@ -183,6 +211,12 @@ NamStackAudioProcessorEditor::NamStackAudioProcessorEditor (NamStackAudioProcess
         addAndMakeVisible (*control.label);
         *control.attachment = std::make_unique<SliderAttachment> (apvts, control.paramID, *control.slider);
     }
+
+    // The sign of Offset picks the lagged channel, so centre is the identity
+    // point and deserves a detent: double-click lands exactly on 0 ms.
+    spreadOffsetSlider.setDoubleClickReturnValue (true, 0.0);
+    spreadOffsetSlider.setTextValueSuffix (" ms");
+    spreadCrossoverSlider.setTextValueSuffix (" Hz");
 
     processor.fileStateChanged.addChangeListener (this);
     refreshFileLabels();
@@ -275,7 +309,7 @@ void NamStackAudioProcessorEditor::paint (juce::Graphics& g)
     g.setFont (subFont);
     g.drawSingleLineText (juce::String (juce::CharPointer_UTF8 (
                               "NAM \xc2\xb7 AIDA-X \xc2\xb7 TONE STACK \xc2\xb7 5-BAND EQ "
-                              "\xc2\xb7 IR MIXER \xc2\xb7 DOUBLER")),
+                              "\xc2\xb7 IR MIXER \xc2\xb7 SPREAD")),
                           20 + juce::GlyphArrangement::getStringWidthInt (titleFont, "NamStack") + 24,
                           (int) baseline);
     g.drawSingleLineText ("Pilali", getWidth() - 20, (int) baseline,
@@ -286,7 +320,7 @@ void NamStackAudioProcessorEditor::resized()
 {
     // Four bands in the MOD pedal's order and shape: AMP (model + quality and
     // gain staging), EQ (tone stack then graphic EQ on one line), CAB (one
-    // column per IR slot: file line above on / level / pan), DOUBLER.
+    // column per IR slot: file line above on / level / pan), SPREAD.
     auto bounds = getLocalBounds().reduced (12);
     bounds.removeFromTop (34); // header
 
@@ -333,7 +367,11 @@ void NamStackAudioProcessorEditor::resized()
     auto eqInner = eqArea.reduced (14, 22);
 
     auto tsColumn = eqInner.removeFromLeft (230);
-    toneOnButton.setBounds (tsColumn.removeFromTop (24));
+    {
+        auto switches = tsColumn.removeFromTop (24);
+        toneOnButton.setBounds (switches.removeFromLeft (100));
+        toneCompButton.setBounds (switches);
+    }
     tsColumn.removeFromTop (8);
     toneStackBox.setBounds (tsColumn.removeFromTop (26));
     tsColumn.removeFromTop (8);
@@ -391,22 +429,35 @@ void NamStackAudioProcessorEditor::resized()
 
     bounds.removeFromTop (8);
 
-    // -------------------------------------------------------------- DOUBLER
-    auto doublerArea = bounds.removeFromTop (150);
-    doublerGroup.setBounds (doublerArea);
-    auto doublerInner = doublerArea.reduced (14, 22);
+    // --------------------------------------------------------------- SPREAD
+    // Power and the one musical knob first, then the deck: each section's
+    // switch sits directly under the knob it gates (Diffuse has no knob).
+    auto spreadArea = bounds.removeFromTop (150);
+    spreadGroup.setBounds (spreadArea);
+    auto spreadInner = spreadArea.reduced (14, 22);
 
-    // centred like the pedal's doubler row
-    const int doublerWidth = 60 + 5 * knobWidth;
-    doublerInner.removeFromLeft ((doublerInner.getWidth() - doublerWidth) / 2);
+    const int switchWidth = 88;
+    const int spreadWidth = 60 + 3 * knobWidth + switchWidth;
+    spreadInner.removeFromLeft ((spreadInner.getWidth() - spreadWidth) / 2);
 
-    doublerOnButton.setBounds (doublerInner.removeFromLeft (60)
-                                   .withHeight (26)
-                                   .translated (0, doublerInner.getHeight() / 2 - 13));
+    spreadOnButton.setBounds (spreadInner.removeFromLeft (60)
+                                  .withHeight (26)
+                                  .translated (0, spreadInner.getHeight() / 2 - 13));
 
-    placeKnob (doublerInner, knobWidth, doublerMixSlider, doublerMixLabel);
-    placeKnob (doublerInner, knobWidth, doublerTimeSlider, doublerTimeLabel);
-    placeKnob (doublerInner, knobWidth, doublerDetuneSlider, doublerDetuneLabel);
-    placeKnob (doublerInner, knobWidth, doublerHumanizeSlider, doublerHumanizeLabel);
-    placeKnob (doublerInner, knobWidth, doublerWidthSlider, doublerWidthLabel);
+    auto placeDeckKnob = [&] (juce::Slider& slider, juce::Label& label, juce::ToggleButton* power)
+    {
+        auto cell = spreadInner.removeFromLeft (knobWidth);
+        label.setBounds (cell.removeFromTop (16));
+        if (power != nullptr)
+            power->setBounds (cell.removeFromBottom (22).withTrimmedLeft (6));
+        slider.setBounds (cell);
+    };
+
+    placeDeckKnob (spreadOffsetSlider, spreadOffsetLabel, nullptr);
+    placeDeckKnob (spreadWobbleSlider, spreadWobbleLabel, &spreadWobbleOnButton);
+    placeDeckKnob (spreadCrossoverSlider, spreadCrossoverLabel, &spreadCrossoverOnButton);
+
+    spreadDiffuseOnButton.setBounds (spreadInner.removeFromLeft (switchWidth)
+                                         .withHeight (26)
+                                         .translated (0, spreadInner.getHeight() / 2 - 13));
 }

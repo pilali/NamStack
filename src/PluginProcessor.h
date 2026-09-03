@@ -3,7 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
 
-#include "dsp/Doubler.h"
+#include "dsp/Spread.h"
 #include "dsp/IRStack.h"
 #include "dsp/NeuralModel.h"
 #include "dsp/GraphicEQ.h"
@@ -80,7 +80,7 @@ private:
     nsdsp::ToneStack toneStack;
     nsdsp::GraphicEQ graphicEq;
     nsdsp::IRStack irStack;
-    nsdsp::Doubler doubler;
+    nsdsp::Spread spread;
 
     juce::SpinLock modelLock;
     std::unique_ptr<nsdsp::NeuralModel> model; // guarded by modelLock in processBlock
@@ -104,18 +104,20 @@ private:
     std::atomic<float>* pTsBass = nullptr;
     std::atomic<float>* pTsMid = nullptr;
     std::atomic<float>* pTsTreble = nullptr;
+    std::atomic<float>* pTsComp = nullptr;
     std::atomic<float>* pGeqOn = nullptr;
     std::atomic<float>* pGeqPosition = nullptr;
     std::atomic<float>* pGeqBand[nsdsp::GraphicEQ::numBands] = {};
     std::atomic<float>* pIrOn[nsdsp::IRStack::numSlots] = {};
     std::atomic<float>* pIrGain[nsdsp::IRStack::numSlots] = {};
     std::atomic<float>* pIrPan[nsdsp::IRStack::numSlots] = {};
-    std::atomic<float>* pDblOn = nullptr;
-    std::atomic<float>* pDblMix = nullptr;
-    std::atomic<float>* pDblTime = nullptr;
-    std::atomic<float>* pDblDetune = nullptr;
-    std::atomic<float>* pDblHumanize = nullptr;
-    std::atomic<float>* pDblWidth = nullptr;
+    std::atomic<float>* pSprOn = nullptr;
+    std::atomic<float>* pSprOffset = nullptr;
+    std::atomic<float>* pSprWobble = nullptr;
+    std::atomic<float>* pSprWobbleOn = nullptr;
+    std::atomic<float>* pSprCrossover = nullptr;
+    std::atomic<float>* pSprCrossoverOn = nullptr;
+    std::atomic<float>* pSprDiffuseOn = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NamStackAudioProcessor)
 };

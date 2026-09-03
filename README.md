@@ -10,7 +10,7 @@ Entrée → Gain d'entrée → [Tone stack si "Pre"] → [EQ 5 bandes si "Pre"]
        → Modèle neuronal (NAM / AIDA-X)
        → [Tone stack si "Post"] → [EQ 5 bandes si "Post"]
        → Mixeur d'IR (4 slots, volume + panoramique)
-       → Doubleur → Gain de sortie → Sortie stéréo
+       → Spread → Gain de sortie → Sortie stéréo
 ```
 
 Les deux égaliseurs ont chacun leur on/off et leur commutateur Pre/Post ; à
@@ -53,11 +53,40 @@ bibliothèques Faust) :
 | Vox AC30 Top Boost | 1M | 1M | 10k | 100k | 50p | 22n | 22n |
 | Ampeg SVT | 250k | 1M | 25k | 32k | 470p | 22n | 22n |
 | Soldano SLO-100 | 250k | 1M | 25k | 47k | 470p | 20n | 20n |
+| Hiwatt DR103 | 220k | 470k | 33k | 100k | 180p | 22n | 47n |
 
 Le tone stack a son propre **on/off** et est **commutable avant (« Pre ») ou
-après (« Post »)** le modèle neuronal. Comme le circuit réel est passif, il
-atténue le signal (creux de médiums caractéristique) — compensez avec le gain
-de sortie si nécessaire.
+après (« Post »)** le modèle neuronal.
+
+#### Compensation de niveau (« Level Comp »)
+
+Le circuit réel est **passif** : sa fonction de transfert ne dépasse jamais
+0 dB, et aux positions réellement utilisées elle est très en dessous. Aux trois
+potentiomètres à midi, la perte pondérée sur 80 Hz – 8 kHz vaut :
+
+| Modèle | Perte à midi | Modèle | Perte à midi |
+|---|---|---|---|
+| Ampeg SVT | −4,7 dB | Vox AC30 Top Boost | −10,1 dB |
+| Marshall JCM800 2203 | −5,0 dB | Hiwatt DR103 | −10,2 dB |
+| Soldano SLO-100 | −5,6 dB | Fender Princeton | −11,2 dB |
+| Fender Bassman 5F6-A | −6,7 dB | Fender Twin Reverb | −13,1 dB |
+| Mesa Boogie Mark | −9,7 dB | | |
+
+Dans un vrai ampli, l'étage de gain qui suit le tone stack rattrape cette perte
+— ce qu'une chaîne de plugin n'a pas. D'où deux symptômes : **activer le tone
+stack faisait chuter le niveau**, et **changer de modèle le déplaçait à nouveau**
+(6 dB entre le Bassman et le Twin).
+
+Le commutateur **Level Comp** (activé par défaut) intègre au filtre un gain de
+rattrapage **propre à chaque modèle**, calculé une fois dans `prepare()`, tel que
+**la position « midi » de chaque modèle vaille exactement 0 dB** (RMS pondéré
+rose sur 80 Hz – 8 kHz). Le comportement du circuit est intact : tourner les
+potentiomètres déplace toujours le niveau exactement comme le fait le circuit
+(tout à zéro reste plus faible, tout à fond reste plus fort), mais l'on/off et
+le changement de modèle deviennent neutres. Coût : une multiplication par
+échantillon (le gain est replié dans le numérateur des coefficients).
+
+Le désactiver redonne le circuit nu, pertes comprises.
 
 ### Égaliseur graphique 5 bandes (Mesa/Boogie)
 
@@ -139,19 +168,75 @@ Lorsque les deux se retrouvent **du même côté**, l'égaliseur graphique passe
   plus aucun slot n'est actif, le mixeur d'IR laisse passer le signal tel quel —
   pas de silence.
 
-### Doubleur
-Effet « doubler » de fin de chaîne dans l'esprit de celui des suites
-Neural DSP : deux « prises » artificielles du signal, micro-désaccordées en
-sens opposés (pitch-shifter à ligne de retard et double prise de son
-crossfadée), retardées de quelques dizaines de millisecondes, panoramiquées
-à gauche et à droite, puis mélangées au signal direct.
+### Spread (image stéréo)
+Image stéréo de fin de chaîne construite comme un ingénieur le fait au
+*double tracking* automatique (ADT) : un canal garde la prise, l'autre reçoit
+une copie légèrement en retard et qui **dérive lentement**. C'est la dérive qui
+fait tout le travail — un retard fixe s'entend comme une seule guitare passée
+dans un filtre en peigne, un retard qui erre de quelques dixièmes de
+milliseconde s'entend comme une deuxième prise.
 
-- **Mix** : dosage direct/doublé (loi à puissance constante)
-- **Time** : retard de base des prises (5–50 ms)
-- **Detune** : micro-désaccord (± cents, opposé entre gauche et droite)
-- **Humanize** : dérive lente et aléatoire du timing et du désaccord,
-  imitant l'imprécision d'un vrai doublage
-- **Width** : écartement stéréo des deux prises
+```
+sortie de chaîne (L, R)
+      |
+      +-- filtre de séparation LR4 par canal (130 Hz par défaut, 32,5–520 Hz)
+      |         |
+      |     bande grave -----------------> reste sur son canal
+      |         |
+      |     bande aiguë --+--------------> canal de référence, intact
+      |                   |
+      |                   +--> deck ------> canal retardé
+      |
+deck = retard fractionnaire ondulant (Lagrange 4 points)
+     + cascade de 6 passe-tout de diffusion (300 Hz – 6 kHz)
+     + correction de précédence de +1,5 dB
+```
+
+- **Offset** (−24 à +24 ms) : la seule commande musicale. Le **signe** choisit le
+  canal retardé (le bouton « pointe vers la fausse prise » ; la précédence tire
+  l'image vers le canal sec), la **valeur** le retard de base. Le centre est
+  exactement dual-mono : en dessous de 1 ms la voie retardée se fond dans la
+  voie sèche, donc un balayage traverse l'identité sans clic.
+- **Wobble** (0–100 % + on/off) : profondeur de la dérive aléatoire du temps de
+  retard, jusqu'à ±1,2 ms (soit ±2 à 4 cents d'ondulation de hauteur continue).
+  Absolue, pas relative à l'offset : un petit offset peut porter une dérive
+  pleine.
+- **Crossover** (32,5–520 Hz + on/off, 130 Hz par défaut) : tout ce qui est en
+  dessous ne passe pas par le retard. Les problèmes de compatibilité mono vivent
+  dans le grave ; les en sortir les rend impossibles par construction. Coupé, la
+  bande entière est doublée : largeur maximale, compatibilité mono échangée en
+  connaissance de cause.
+- **Diffuse** (on/off) : cascade de passe-tout du côté retardé. Elle décorrèle la
+  phase sans toucher au module. Coupée, le côté retardé est un retard pur : plus
+  cohérent, plus « peigne » à la sommation mono.
+
+Pas de dosage direct/doublé : tant que Spread est actif le deck tourne à pleine
+force et Offset est la seule dimension musicale. L'enclenchement est un fondu
+d'environ 25 ms entre l'entrée intacte et l'image doublée, et les commutateurs
+de section sont eux aussi des fondus (leurs deux extrémités sont plates en
+module mais diffèrent en phase — un basculement instantané ferait un saut de
+forme d'onde).
+
+Le moteur reprend celui du **plug-in TONE3000** (*Spread*, cf. `plugin/include/Spread.h`
+et `plugin/docs/stereo-image.md` de ce projet), réimplémenté sans JUCE pour que
+la variante MOD le partage. Une différence assumée : ici **les deux canaux ont
+leur propre filtre de séparation**. TONE3000 n'en alimente qu'un seul depuis le
+canal 0, parce que sa chaîne y est mono ; le mixeur d'IR de NamStack peut
+panoramiquer quatre slots, donc la source est réellement stéréo. Séparer les
+deux canaux conserve les graves de chacun et leur donne la même rotation de
+phase LR4 — ce qui est précisément ce qui fait que la bande grave se somme
+proprement. Avec une source mono, les deux chemins sont identiques et le
+résultat est celui de l'original, échantillon par échantillon.
+
+Sur un bus de sortie mono, le moteur reste au repos (la sortie est la chaîne
+telle quelle, jamais une moitié de doublage resommée sur elle-même) ; le
+paramètre garde sa valeur et reprend vie sur un bus stéréo.
+
+> **Remplace le doubleur** (`dbl_*`) des versions précédentes, qui micro-désaccordait
+> deux prises artificielles avec un pitch-shifter à grains crossfadés. Ses
+> commandes n'ont pas d'équivalent ici (pas de Mix, pas de Detune, pas de
+> Humanize), donc les identifiants de paramètres ont changé plutôt que d'être
+> recyclés en boutons sans effet.
 
 ## Compilation
 
@@ -307,7 +392,7 @@ La recette `mod-plugin-builder/namstack/namstack.mk` :
 
 Conseils CPU pour le Dwarf : privilégiez les modèles NAM « feather/nano » ou
 les modèles AIDA-X LSTM légers ; le tone stack, le mixeur d'IR (jusqu'à
-4 slots) et le doubleur sont peu coûteux en comparaison du modèle neuronal.
+4 slots) et Spread sont peu coûteux en comparaison du modèle neuronal.
 Sur les modèles **A2 slimmables**, le potentiomètre **Quality** est le levier
 CPU le plus efficace.
 
