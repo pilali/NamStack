@@ -129,7 +129,12 @@ if(NAMSTACK_BUILD_JUCE)
         COPY_PLUGIN_AFTER_BUILD FALSE
         PLUGIN_MANUFACTURER_CODE Plal
         PLUGIN_CODE NmSk
-        FORMATS LV2 VST3 Standalone
+        # AU is listed unconditionally: JUCE filters FORMATS through the
+        # platform's supported kinds (_juce_get_platform_plugin_kinds), so it
+        # is silently dropped everywhere but macOS. AUv3 is deliberately absent
+        # -- JUCE only offers it under the Xcode generator, and CI builds with
+        # the default one.
+        FORMATS LV2 VST3 AU Standalone
         PRODUCT_NAME "NamStack"
         LV2URI "urn:pilali:NamStack")
 

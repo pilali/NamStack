@@ -252,6 +252,8 @@ cmake --build build --parallel
 Binaires produits :
 - `build/NamStack_artefacts/Release/LV2/NamStack.lv2/` — copier dans `~/.lv2/`
 - `build/NamStack_artefacts/Release/VST3/NamStack.vst3/` — copier dans `~/.vst3/`
+- `build/NamStack_artefacts/Release/AU/NamStack.component/` — **macOS uniquement**,
+  copier dans `~/Library/Audio/Plug-Ins/Components/`
 - `build/NamStack_artefacts/Release/Standalone/NamStack`
 - `build/mod_artefacts/namstack-mod.lv2/` — LV2 natif (MOD / headless)
 
@@ -268,7 +270,7 @@ libxinerama-dev libxcursor-dev libfreetype-dev`.
 | `mod-lv2 (aarch64)` | LV2 MOD, compilation croisée | `namstack-mod.lv2-linux-aarch64` |
 | `juce (linux)` | VST3 / LV2 / Standalone | `NamStack-linux` |
 | `juce (windows)` | VST3 / Standalone (MSVC) | `NamStack-windows` |
-| `juce (macos)` | VST3 / LV2 / Standalone | `NamStack-macos` |
+| `juce (macos)` | VST3 / **AU** / LV2 / Standalone | `NamStack-macos` |
 
 Le LV2 MOD étant sans dépendance hors libc/libstdc++ (pas de JUCE), la variante
 aarch64 est une **simple compilation croisée** (`g++-aarch64-linux-gnu`), sans

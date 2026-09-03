@@ -140,5 +140,6 @@ jobs:
           path: |
             build/NamStack_artefacts/**/VST3/**
             build/NamStack_artefacts/**/LV2/**
+            build/NamStack_artefacts/**/AU/**
             build/NamStack_artefacts/**/Standalone/**
           if-no-files-found: error
