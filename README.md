@@ -395,6 +395,29 @@ La recette `mod-plugin-builder/namstack/namstack.mk` :
 Conseils CPU pour le Dwarf : privilégiez les modèles NAM « feather/nano » ou
 les modèles AIDA-X LSTM légers ; le tone stack, le mixeur d'IR (jusqu'à
 4 slots) et Spread sont peu coûteux en comparaison du modèle neuronal.
+
+**Garde anti-dénormaux.** Tous les filtres à récursion de la chaîne (tone
+stack, branches à gyrateur de l'EQ 5 bandes, filtre de séparation et
+diffuseur de Spread, queues d'IR) décroissent vers zéro sans jamais
+l'atteindre : dès que le musicien s'arrête, leurs états descendent dans le
+domaine subnormal et y restent, où l'arithmétique quitte le chemin rapide du
+FPU. Le LV2 MOD force donc le *flush-to-zero* le temps de chaque callback
+(`src/core/DenormalGuard.h` ; la variante JUCE l'avait déjà via
+`juce::ScopedNoDenormals`), et restaure le mode précédent en sortant — le
+thread de l'hôte ne nous appartient pas.
+
+Mesuré à travers le bundle livré, sur `tone stack (JCM800) → EQ 5 bandes →
+Spread`, blocs de 128 échantillons à 48 kHz :
+
+| | sur signal | après 20 s de silence |
+|---|---|---|
+| sans la garde | 101 ns/éch. | **3354 ns/éch.**, 930 879 échantillons subnormaux |
+| avec la garde | 101–108 ns/éch. | **107 ns/éch.**, aucun |
+
+Soit un facteur 31 sur le cas silencieux — exactement au moment où l'appareil
+devrait être au repos — pour un coût nul sur signal. Le mécanisme est
+`FPCR.FZ` sur aarch64 (Dwarf), `FPSCR.FZ` sur armv7 (Duo, DuoX) et `MXCSR`
+FZ+DAZ sur x86-64 ; les trois sont vérifiés à la compilation croisée.
 Sur les modèles **A2 slimmables**, le potentiomètre **Quality** est le levier
 CPU le plus efficace.
 

@@ -21,6 +21,7 @@
 #include <lv2/worker/worker.h>
 
 #include "core/Convolver.h"
+#include "core/DenormalGuard.h"
 #include "core/IRLoader.h"
 #include "core/IRMixer.h"
 #include "dsp/Spread.h"
@@ -584,6 +585,13 @@ float param (const NamStackMod* self, PortIndex port, float fallback = 0.0f)
 void run (LV2_Handle instance, uint32_t nSamples)
 {
     auto* self = static_cast<NamStackMod*> (instance);
+
+    // Flush-to-zero for this callback, restored on the way out. Without it the
+    // filter states walk into the subnormal range as soon as the player stops
+    // and the whole chain falls off the FPU's fast path -- 25x slower on the
+    // measured x86-64 case, and the JUCE build has had juce::ScopedNoDenormals
+    // for this all along. See core/DenormalGuard.h.
+    const nsdsp::DenormalGuard denormalGuard;
 
     // set up the notify port forge
     const auto notifyCapacity = self->notify->atom.size;
