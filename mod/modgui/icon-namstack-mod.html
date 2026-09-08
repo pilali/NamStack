@@ -1,5 +1,10 @@
 <div class="namstackmod{{{cns}}} mod-pedal" mod-role="plugin">
-    <div mod-role="drag-handle" class="ns-drag-handle"></div>
+    <!-- The mod-drag-handle class is not decorative: mod-ui only zooms in on the
+         plugin when the click lands on an element carrying it (the click option
+         pedalboard.js hands to assignIconFunctionality tests
+         $(event.target).hasClass("mod-drag-handle")). mod-role=drag-handle alone
+         moves the pedal but never focuses it. -->
+    <div mod-role="drag-handle" class="mod-drag-handle ns-drag-handle"></div>
 
     <div class="ns-header">
         <h1>NamStack</h1>
