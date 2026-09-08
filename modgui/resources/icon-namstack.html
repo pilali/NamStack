@@ -3,7 +3,7 @@
 
     <div class="ns-header">
         <h1>NamStack</h1>
-        <span class="ns-subtitle">NAM &middot; AIDA-X &middot; TONE STACK &middot; 5-BAND EQ &middot; IR MIXER &middot; DOUBLER</span>
+        <span class="ns-subtitle">NAM &middot; AIDA-X &middot; TONE STACK &middot; 5-BAND EQ &middot; IR MIXER &middot; SPREAD</span>
         <span class="ns-brand">Pilali</span>
     </div>
 
@@ -43,6 +43,13 @@
             <div class="ns-knob" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:ts_treble"></div>
             <div class="ns-value" mod-role="input-parameter-value" mod-parameter-uri="urn:pilali:NamStack:ts_treble"></div>
         </div>
+        <!-- The passive stack loses 4.6 to 13.1 dB at noon depending on the
+             model; on (the default) makes that up so noon reads 0 dB. -->
+        <div class="ns-ctrl">
+            <p>LEVEL COMP</p>
+            <div class="ns-switch" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:ts_comp"></div>
+            <div class="ns-value"></div>
+        </div>
         <div class="ns-ctrl">
             <p>PARAM 1</p>
             <div class="ns-knob" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:aida_p1"></div>
@@ -81,25 +88,43 @@
             <div class="ns-knob" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:ir4_gain"></div>
             <div class="ns-value" mod-role="input-parameter-value" mod-parameter-uri="urn:pilali:NamStack:ir4_gain"></div>
         </div>
+        <!-- Stereo image: OFFSET is the one musical control (sign = which
+             channel is late, centre = exactly dual mono), the rest gate the
+             deck sections. -->
         <div class="ns-ctrl">
-            <p>DOUBLER</p>
-            <div class="ns-switch" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:dbl_on"></div>
+            <p>SPREAD</p>
+            <div class="ns-switch" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:spr_on"></div>
             <div class="ns-value"></div>
         </div>
         <div class="ns-ctrl">
-            <p>MIX</p>
-            <div class="ns-knob" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:dbl_mix"></div>
-            <div class="ns-value" mod-role="input-parameter-value" mod-parameter-uri="urn:pilali:NamStack:dbl_mix"></div>
+            <p>OFFSET</p>
+            <div class="ns-knob" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:spr_offset"></div>
+            <div class="ns-value" mod-role="input-parameter-value" mod-parameter-uri="urn:pilali:NamStack:spr_offset"></div>
         </div>
         <div class="ns-ctrl">
-            <p>TIME</p>
-            <div class="ns-knob" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:dbl_time"></div>
-            <div class="ns-value" mod-role="input-parameter-value" mod-parameter-uri="urn:pilali:NamStack:dbl_time"></div>
+            <p>WOBBLE</p>
+            <div class="ns-knob" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:spr_wobble"></div>
+            <div class="ns-value" mod-role="input-parameter-value" mod-parameter-uri="urn:pilali:NamStack:spr_wobble"></div>
         </div>
         <div class="ns-ctrl">
-            <p>WIDTH</p>
-            <div class="ns-knob" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:dbl_width"></div>
-            <div class="ns-value" mod-role="input-parameter-value" mod-parameter-uri="urn:pilali:NamStack:dbl_width"></div>
+            <p>WOBBLE ON</p>
+            <div class="ns-switch" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:spr_wobble_on"></div>
+            <div class="ns-value"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>CROSSOVER</p>
+            <div class="ns-knob" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:spr_xover"></div>
+            <div class="ns-value" mod-role="input-parameter-value" mod-parameter-uri="urn:pilali:NamStack:spr_xover"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>X-OVER ON</p>
+            <div class="ns-switch" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:spr_xover_on"></div>
+            <div class="ns-value"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>DIFFUSE</p>
+            <div class="ns-switch" mod-role="input-parameter" mod-parameter-uri="urn:pilali:NamStack:spr_diffuse_on"></div>
+            <div class="ns-value"></div>
         </div>
     </div>
 

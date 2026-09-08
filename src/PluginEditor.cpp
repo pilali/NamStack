@@ -2,197 +2,254 @@
 
 #include "ParamIDs.h"
 
+#include <utility>
+
 namespace
 {
-void setupRotary (juce::Slider& slider)
-{
-    slider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
-    slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 64, 16);
-}
+// ---------------------------------------------------------------- geometry
+// Mirrors mod/modgui/stylesheet-namstack-mod.css. Vertical positions are the
+// pedal's, unchanged; the panel is wider (1200 vs 1120) only because the tone
+// stack's combo box needs room the pedal's knob does not.
+constexpr int kWidth = 1200;
+constexpr int kHeight = 624;
 
-void setupCaption (juce::Label& label)
+constexpr int kRuleInset = 28;   // .ns-section: left 28, width = panel - 56
+constexpr int kRuleGap = 120;    // centre gap the section name sits in
+
+constexpr int kCaptionH = 16;    // .ns-ctrl p
+constexpr int kValueH = 16;      // .ns-value
+constexpr int kWidgetTop = 2;    // .ns-knob margin-top
+constexpr int kKnobH = 56;       // .ns-knob / .ns-switch
+constexpr int kFaderH = 96;      // .ns-fader
+constexpr int kComboH = 24;
+
+constexpr int kCell = 88;        // .ns-ctrl
+constexpr int kEqCell = 80;      // .ns-row-eq .ns-ctrl
+constexpr int kStackCell = 160;  // the amp-model list, wide enough for its text
+constexpr int kFaderCell = 68;   // .ns-row-eq .ns-ctrl-fader
+constexpr int kSlotW = 264;      // one IR slot = 3 cells
+constexpr int kFileW = 232;      // .ns-file-select
+constexpr int kFileBoxH = 22;
+constexpr int kClearW = 24;
+
+// Section rules and the row under each of them (CSS tops, unchanged).
+constexpr int kAmpSection = 50, kAmpRow = 70;
+constexpr int kEqSection = 170, kEqRow = 190;
+constexpr int kCabSection = 330, kCabRow = 392;
+constexpr int kSpreadSection = 492, kSpreadRow = 512;
+constexpr int kModelFileTop = 94, kIrFileTop = 350;
+
+// Row lefts: each row is centred as a group in the panel.
+//   AMP:    240 (model selector) + 20 + 5*88 = 700 -> (1200-700)/2 = 250
+//   EQ:     160 + 8*80 + 5*68           = 1140     -> (1200-1140)/2 = 30
+//   CAB:    4 * 264                     = 1056     -> (1200-1056)/2 = 72
+//   SPREAD: 7 * 88                      = 616      -> (1200-616)/2  = 292
+constexpr int kAmpModelX = 250;
+constexpr int kAmpKnobsX = 510;
+constexpr int kEqRowX = 30;
+constexpr int kCabRowX = 72;
+constexpr int kSpreadRowX = 292;
+
+using LnF = NamStackLookAndFeel;
+
+void placeCaption (juce::Label& caption, int x, int top, int width)
 {
-    label.setJustificationType (juce::Justification::centred);
-    label.setFont (juce::FontOptions (13.0f));
-    label.setColour (juce::Label::textColourId, juce::Colours::lightgrey);
+    caption.setBounds (x, top, width, kCaptionH);
 }
 } // namespace
+
+// ------------------------------------------------------------ cell builders
+
+void NamStackAudioProcessorEditor::addKnob (juce::Slider& slider, juce::Label& caption,
+                                            const juce::String& text, const juce::String& suffix)
+{
+    slider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
+    slider.setTextValueSuffix (suffix);
+    slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, kCell, kValueH);
+    slider.setColour (juce::Slider::textBoxTextColourId, LnF::textDim);
+    slider.setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
+    slider.setColour (juce::Slider::textBoxBackgroundColourId, juce::Colours::transparentBlack);
+    addAndMakeVisible (slider);
+
+    caption.setText (text, juce::dontSendNotification);
+    caption.setJustificationType (juce::Justification::centred);
+    caption.setFont (juce::Font (juce::FontOptions (11.0f, juce::Font::bold)));
+    caption.setColour (juce::Label::textColourId, LnF::text);
+    addAndMakeVisible (caption);
+}
+
+void NamStackAudioProcessorEditor::addFader (juce::Slider& slider, juce::Label& caption,
+                                             const juce::String& text, const juce::String& suffix)
+{
+    addKnob (slider, caption, text, suffix);
+    slider.setSliderStyle (juce::Slider::LinearVertical);
+    slider.setDoubleClickReturnValue (true, 0.0); // back to flat
+}
+
+void NamStackAudioProcessorEditor::addSwitch (juce::ToggleButton& button, juce::Label& caption,
+                                              const juce::String& text, const juce::String& tooltip)
+{
+    // The name lives in the caption above, exactly as on the pedal, so the
+    // button itself carries no text.
+    button.setButtonText ({});
+    if (tooltip.isNotEmpty())
+        button.setTooltip (tooltip);
+    addAndMakeVisible (button);
+
+    caption.setText (text, juce::dontSendNotification);
+    caption.setJustificationType (juce::Justification::centred);
+    caption.setFont (juce::Font (juce::FontOptions (11.0f, juce::Font::bold)));
+    caption.setColour (juce::Label::textColourId, LnF::text);
+    if (tooltip.isNotEmpty())
+        caption.setTooltip (tooltip);
+    addAndMakeVisible (caption);
+}
+
+void NamStackAudioProcessorEditor::addCombo (juce::ComboBox& box, juce::Label& caption,
+                                             const juce::String& text, const juce::String& paramID)
+{
+    if (auto* choice = dynamic_cast<juce::AudioParameterChoice*> (processor.apvts.getParameter (paramID)))
+        box.addItemList (choice->choices, 1);
+    addAndMakeVisible (box);
+
+    caption.setText (text, juce::dontSendNotification);
+    caption.setJustificationType (juce::Justification::centred);
+    caption.setFont (juce::Font (juce::FontOptions (11.0f, juce::Font::bold)));
+    caption.setColour (juce::Label::textColourId, LnF::text);
+    addAndMakeVisible (caption);
+}
+
+void NamStackAudioProcessorEditor::addFileRow (juce::Label& caption, juce::TextButton& name,
+                                               juce::TextButton& clear, const juce::String& text)
+{
+    // The pedal's file selector: a left-aligned caption over a dark box holding
+    // the loaded file's name. Clicking the box opens the chooser; the X next to
+    // it is the "-- none --" entry of the pedal's dropdown.
+    caption.setText (text, juce::dontSendNotification);
+    caption.setJustificationType (juce::Justification::centredLeft);
+    caption.setFont (juce::Font (juce::FontOptions (11.0f, juce::Font::bold)));
+    caption.setColour (juce::Label::textColourId, LnF::text);
+    addAndMakeVisible (caption);
+
+    name.getProperties().set (LnF::alignLeftProperty, true);
+    addAndMakeVisible (name);
+    addAndMakeVisible (clear);
+}
+
+// ------------------------------------------------------------------- editor
 
 NamStackAudioProcessorEditor::NamStackAudioProcessorEditor (NamStackAudioProcessor& p)
     : AudioProcessorEditor (&p), processor (p)
 {
+    setLookAndFeel (&lookAndFeel);
+
     auto& apvts = processor.apvts;
 
-    // ------------------------------------------------------------ amp model
-    addAndMakeVisible (ampGroup);
-    addAndMakeVisible (loadModelButton);
-    addAndMakeVisible (clearModelButton);
-    addAndMakeVisible (modelNameLabel);
+    // ------------------------------------------------------------------ AMP
+    addFileRow (modelFileLabel, modelNameButton, modelClearButton, "NEURAL MODEL");
+    modelNameButton.onClick = [this] { chooseModelFile(); };
+    modelClearButton.onClick = [this] { processor.clearModel(); };
+
+    modelInfoLabel.setJustificationType (juce::Justification::centredLeft);
+    modelInfoLabel.setFont (juce::Font (juce::FontOptions (11.0f)));
+    modelInfoLabel.setColour (juce::Label::textColourId, LnF::textDim);
     addAndMakeVisible (modelInfoLabel);
 
-    loadModelButton.onClick = [this] { chooseModelFile(); };
-    clearModelButton.onClick = [this] { processor.clearModel(); };
-    modelNameLabel.setJustificationType (juce::Justification::centredLeft);
-    modelInfoLabel.setJustificationType (juce::Justification::centredLeft);
-    modelInfoLabel.setColour (juce::Label::textColourId, juce::Colours::grey);
+    addKnob (qualitySlider, qualityLabel, "QUALITY");
+    addKnob (inputGainSlider, inputGainLabel, "INPUT", " dB");
+    addKnob (aidaParam1Slider, aidaParam1Label, "PARAM 1");
+    addKnob (aidaParam2Slider, aidaParam2Label, "PARAM 2");
+    addKnob (outputGainSlider, outputGainLabel, "OUTPUT", " dB");
 
-    setupRotary (inputGainSlider);
-    setupRotary (outputGainSlider);
-    setupCaption (inputGainLabel);
-    setupCaption (outputGainLabel);
-    addAndMakeVisible (inputGainSlider);
-    addAndMakeVisible (outputGainSlider);
-    addAndMakeVisible (inputGainLabel);
-    addAndMakeVisible (outputGainLabel);
+    qualityAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::modelQuality, qualitySlider);
     inputGainAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::inputGain, inputGainSlider);
-    outputGainAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::outputGain, outputGainSlider);
-
-    setupRotary (aidaParam1Slider);
-    setupRotary (aidaParam2Slider);
-    setupCaption (aidaParam1Label);
-    setupCaption (aidaParam2Label);
-    addAndMakeVisible (aidaParam1Slider);
-    addAndMakeVisible (aidaParam2Slider);
-    addAndMakeVisible (aidaParam1Label);
-    addAndMakeVisible (aidaParam2Label);
     aidaParam1Attachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::aidaParam1, aidaParam1Slider);
     aidaParam2Attachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::aidaParam2, aidaParam2Slider);
+    outputGainAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::outputGain, outputGainSlider);
 
-    setupRotary (qualitySlider);
-    setupCaption (qualityLabel);
-    addAndMakeVisible (qualitySlider);
-    addAndMakeVisible (qualityLabel);
-    qualityAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::modelQuality, qualitySlider);
-
-    // -------------------------------------------- EQ: tone stack + graphic
-    addAndMakeVisible (eqGroup);
-    addAndMakeVisible (toneOnButton);
-    addAndMakeVisible (toneStackBox);
-    addAndMakeVisible (tonePositionBox);
-
-    toneOnAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::tsOn, toneOnButton);
-
-    if (auto* choice = dynamic_cast<juce::AudioParameterChoice*> (apvts.getParameter (ParamIDs::tsModel)))
-        toneStackBox.addItemList (choice->choices, 1);
-    if (auto* choice = dynamic_cast<juce::AudioParameterChoice*> (apvts.getParameter (ParamIDs::tsPosition)))
-        tonePositionBox.addItemList (choice->choices, 1);
+    // ------------------------------------------------------------------- EQ
+    addCombo (toneStackBox, toneStackLabel, "STACK", ParamIDs::tsModel);
+    addSwitch (toneOnButton, toneOnLabel, "STACK ON");
+    addCombo (tonePositionBox, tonePositionLabel, "PRE/POST", ParamIDs::tsPosition);
+    addKnob (bassSlider, bassLabel, "BASS");
+    addKnob (midSlider, midLabel, "MIDDLE");
+    addKnob (trebleSlider, trebleLabel, "TREBLE");
+    addSwitch (toneCompButton, toneCompLabel, "LEVEL COMP",
+               "Compensates the passive stack's insertion loss: noon = 0 dB on every model");
+    addSwitch (geqOnButton, geqOnLabel, "EQ ON");
+    addCombo (geqPositionBox, geqPositionLabel, "EQ PRE/POST", ParamIDs::geqPosition);
 
     toneStackAttachment = std::make_unique<ComboAttachment> (apvts, ParamIDs::tsModel, toneStackBox);
+    toneOnAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::tsOn, toneOnButton);
     tonePositionAttachment = std::make_unique<ComboAttachment> (apvts, ParamIDs::tsPosition, tonePositionBox);
-
-    for (auto* slider : { &bassSlider, &midSlider, &trebleSlider })
-    {
-        setupRotary (*slider);
-        addAndMakeVisible (*slider);
-    }
-    for (auto* label : { &bassLabel, &midLabel, &trebleLabel })
-    {
-        setupCaption (*label);
-        addAndMakeVisible (*label);
-    }
     bassAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::tsBass, bassSlider);
     midAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::tsMid, midSlider);
     trebleAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::tsTreble, trebleSlider);
-
-    addAndMakeVisible (geqOnButton);
-    addAndMakeVisible (geqPositionBox);
-
-    if (auto* choice = dynamic_cast<juce::AudioParameterChoice*> (apvts.getParameter (ParamIDs::geqPosition)))
-        geqPositionBox.addItemList (choice->choices, 1);
-
+    toneCompAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::tsComp, toneCompButton);
     geqOnAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::geqOn, geqOnButton);
     geqPositionAttachment = std::make_unique<ComboAttachment> (apvts, ParamIDs::geqPosition, geqPositionBox);
 
     for (int band = 0; band < nsdsp::GraphicEQ::numBands; ++band)
     {
         const auto hz = nsdsp::GraphicEQ::getFrequencies()[(size_t) band];
-
-        // Vertical faders, like the real thing.
-        auto& slider = geqSliders[band];
-        slider.setSliderStyle (juce::Slider::LinearVertical);
-        slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 56, 16);
-        slider.setDoubleClickReturnValue (true, 0.0); // back to flat
-        addAndMakeVisible (slider);
-
-        geqLabels[band].setText (juce::String (juce::roundToInt (hz)) + " Hz", juce::dontSendNotification);
-        setupCaption (geqLabels[band]);
-        addAndMakeVisible (geqLabels[band]);
-
+        addFader (geqSliders[band], geqLabels[band], juce::String (juce::roundToInt (hz)), " dB");
         geqAttachments[band] = std::make_unique<SliderAttachment> (
-            apvts, ParamIDs::geqBand (band, hz), slider);
+            apvts, ParamIDs::geqBand (band, hz), geqSliders[band]);
     }
 
-    // -------------------------------------------------------------- IR slots
-    addAndMakeVisible (irGroup);
-
+    // ------------------------------------------------------------------ CAB
     for (int i = 0; i < nsdsp::IRStack::numSlots; ++i)
     {
-        auto& row = irRows[i];
+        auto& slot = irSlots[i];
 
-        addAndMakeVisible (row.onButton);
-        addAndMakeVisible (row.loadButton);
-        addAndMakeVisible (row.clearButton);
-        addAndMakeVisible (row.nameLabel);
-        addAndMakeVisible (row.gainSlider);
-        addAndMakeVisible (row.panSlider);
+        addFileRow (slot.fileLabel, slot.nameButton, slot.clearButton, "IR " + juce::String (i + 1));
+        slot.nameButton.onClick = [this, i] { chooseIRFile (i); };
+        slot.clearButton.onClick = [this, i] { processor.clearIR (i); };
 
-        row.loadButton.onClick = [this, i] { chooseIRFile (i); };
-        row.clearButton.onClick = [this, i] { processor.clearIR (i); };
-        row.nameLabel.setJustificationType (juce::Justification::centredLeft);
+        addSwitch (slot.onButton, slot.onLabel, "ON");
+        addKnob (slot.gainSlider, slot.gainLabel, "LEVEL", " dB");
+        addKnob (slot.panSlider, slot.panLabel, "PAN");
 
-        // Rotary level and pan under the slot's file line, as on the MOD pedal.
-        setupRotary (row.gainSlider);
-        row.gainSlider.setTextValueSuffix (" dB");
-        setupRotary (row.panSlider);
-        setupCaption (row.gainLabel);
-        setupCaption (row.panLabel);
-        addAndMakeVisible (row.gainLabel);
-        addAndMakeVisible (row.panLabel);
-
-        row.onAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::irOn (i), row.onButton);
-        row.gainAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::irGain (i), row.gainSlider);
-        row.panAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::irPan (i), row.panSlider);
+        slot.onAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::irOn (i), slot.onButton);
+        slot.gainAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::irGain (i), slot.gainSlider);
+        slot.panAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::irPan (i), slot.panSlider);
     }
 
-    // --------------------------------------------------------------- doubler
-    addAndMakeVisible (doublerGroup);
-    addAndMakeVisible (doublerOnButton);
-    doublerOnAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::dblOn, doublerOnButton);
+    // --------------------------------------------------------------- SPREAD
+    addSwitch (spreadOnButton, spreadOnLabel, "SPREAD",
+               "ADT-style stereo image: one side dry, the other a wobbling late copy");
+    addKnob (spreadOffsetSlider, spreadOffsetLabel, "OFFSET", " ms");
+    addKnob (spreadWobbleSlider, spreadWobbleLabel, "WOBBLE");
+    addSwitch (spreadWobbleOnButton, spreadWobbleOnLabel, "WOBBLE ON",
+               "Random-walk drift of the delay time -- what makes the copy read as a second take");
+    addKnob (spreadCrossoverSlider, spreadCrossoverLabel, "CROSSOVER", " Hz");
+    addSwitch (spreadCrossoverOnButton, spreadCrossoverOnLabel, "X-OVER ON",
+               "Keeps everything under the cutoff out of the delay, so the lows stay mono-safe");
+    addSwitch (spreadDiffuseOnButton, spreadDiffuseOnLabel, "DIFFUSE",
+               "Allpass cascade on the late side: decorrelates phase without touching magnitude");
 
-    struct DoublerControl
-    {
-        juce::Slider* slider;
-        juce::Label* label;
-        const char* paramID;
-        std::unique_ptr<SliderAttachment>* attachment;
-    };
+    // The sign of Offset picks the lagged channel, so centre is the identity
+    // point and deserves a detent: double-click lands exactly on 0 ms.
+    spreadOffsetSlider.setDoubleClickReturnValue (true, 0.0);
 
-    DoublerControl doublerControls[] = {
-        { &doublerMixSlider, &doublerMixLabel, ParamIDs::dblMix, &doublerMixAttachment },
-        { &doublerTimeSlider, &doublerTimeLabel, ParamIDs::dblTime, &doublerTimeAttachment },
-        { &doublerDetuneSlider, &doublerDetuneLabel, ParamIDs::dblDetune, &doublerDetuneAttachment },
-        { &doublerHumanizeSlider, &doublerHumanizeLabel, ParamIDs::dblHumanize, &doublerHumanizeAttachment },
-        { &doublerWidthSlider, &doublerWidthLabel, ParamIDs::dblWidth, &doublerWidthAttachment },
-    };
-
-    for (auto& control : doublerControls)
-    {
-        setupRotary (*control.slider);
-        setupCaption (*control.label);
-        addAndMakeVisible (*control.slider);
-        addAndMakeVisible (*control.label);
-        *control.attachment = std::make_unique<SliderAttachment> (apvts, control.paramID, *control.slider);
-    }
+    spreadOnAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::sprOn, spreadOnButton);
+    spreadOffsetAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::sprOffset, spreadOffsetSlider);
+    spreadWobbleAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::sprWobble, spreadWobbleSlider);
+    spreadWobbleOnAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::sprWobbleOn, spreadWobbleOnButton);
+    spreadCrossoverAttachment = std::make_unique<SliderAttachment> (apvts, ParamIDs::sprCrossover, spreadCrossoverSlider);
+    spreadCrossoverOnAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::sprCrossoverOn, spreadCrossoverOnButton);
+    spreadDiffuseOnAttachment = std::make_unique<ButtonAttachment> (apvts, ParamIDs::sprDiffuseOn, spreadDiffuseOnButton);
 
     processor.fileStateChanged.addChangeListener (this);
     refreshFileLabels();
 
-    setSize (1140, 812); // four bands, laid out like the MOD pedal
+    setSize (kWidth, kHeight);
 }
 
 NamStackAudioProcessorEditor::~NamStackAudioProcessorEditor()
 {
     processor.fileStateChanged.removeChangeListener (this);
+    setLookAndFeel (nullptr);
 }
 
 void NamStackAudioProcessorEditor::changeListenerCallback (juce::ChangeBroadcaster*)
@@ -203,15 +260,13 @@ void NamStackAudioProcessorEditor::changeListenerCallback (juce::ChangeBroadcast
 void NamStackAudioProcessorEditor::refreshFileLabels()
 {
     const auto modelName = processor.getModelName();
-    modelNameLabel.setText (modelName.isNotEmpty() ? modelName : "<no model>",
-                            juce::dontSendNotification);
+    modelNameButton.setButtonText (modelName.isNotEmpty() ? modelName : "-- none --");
     modelInfoLabel.setText (processor.getModelInfo(), juce::dontSendNotification);
 
     for (int i = 0; i < nsdsp::IRStack::numSlots; ++i)
     {
         const auto irName = processor.getIRName (i);
-        irRows[i].nameLabel.setText (irName.isNotEmpty() ? irName : "<empty>",
-                                     juce::dontSendNotification);
+        irSlots[i].nameButton.setButtonText (irName.isNotEmpty() ? irName : "-- none --");
     }
 
     // The conditioning knobs only do something on conditioned AIDA-X models.
@@ -259,154 +314,153 @@ void NamStackAudioProcessorEditor::chooseIRFile (int slot)
 
 void NamStackAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+    // Panel: the pedal's vertical gradient inside a dark edge.
+    const auto bounds = getLocalBounds().toFloat();
+    g.setGradientFill ({ LnF::bgTop, 0.0f, 0.0f, LnF::bgBottom, 0.0f, bounds.getHeight(), false });
+    g.fillRoundedRectangle (bounds, 12.0f);
+    g.setColour (LnF::panelEdge);
+    g.drawRoundedRectangle (bounds.reduced (1.0f), 12.0f, 2.0f);
 
-    // Title, feature list and brand share one text baseline, as on the MOD
-    // pedal's header.
-    const float baseline = 32.0f;
-
-    auto titleFont = juce::Font (juce::FontOptions (24.0f, juce::Font::bold));
-    g.setColour (juce::Colours::white);
+    // Header: title, feature list and brand share one text baseline.
+    constexpr float baseline = 33.0f;
+    const auto titleFont = juce::Font (juce::FontOptions (26.0f, juce::Font::bold));
+    g.setColour (LnF::amber);
     g.setFont (titleFont);
-    g.drawSingleLineText ("NamStack", 20, (int) baseline);
+    g.drawSingleLineText ("NamStack", 24, (int) baseline);
 
-    auto subFont = juce::Font (juce::FontOptions (13.0f));
-    g.setColour (juce::Colours::grey);
-    g.setFont (subFont);
+    g.setColour (LnF::textDim);
+    g.setFont (juce::Font (juce::FontOptions (11.0f)));
     g.drawSingleLineText (juce::String (juce::CharPointer_UTF8 (
                               "NAM \xc2\xb7 AIDA-X \xc2\xb7 TONE STACK \xc2\xb7 5-BAND EQ "
-                              "\xc2\xb7 IR MIXER \xc2\xb7 DOUBLER")),
-                          20 + juce::GlyphArrangement::getStringWidthInt (titleFont, "NamStack") + 24,
+                              "\xc2\xb7 IR MIXER \xc2\xb7 SPREAD")),
+                          24 + juce::GlyphArrangement::getStringWidthInt (titleFont, "NamStack") + 24,
                           (int) baseline);
-    g.drawSingleLineText ("Pilali", getWidth() - 20, (int) baseline,
-                          juce::Justification::right);
+    g.drawSingleLineText ("Pilali", getWidth() - 24, (int) baseline, juce::Justification::right);
+
+    // Section rules: a thin line broken in the middle by the section's name.
+    const auto ruleWidth = getWidth() - 2 * kRuleInset;
+    const auto segment = (ruleWidth - kRuleGap) / 2;
+
+    const auto drawSection = [&] (int top, const char* name)
+    {
+        const auto y = (float) top + 7.0f;
+        g.setColour (LnF::boxEdge);
+        g.fillRect ((float) kRuleInset, y, (float) segment, 1.0f);
+        g.fillRect ((float) (kRuleInset + segment + kRuleGap), y, (float) segment, 1.0f);
+
+        g.setColour (LnF::textDim);
+        g.setFont (juce::Font (juce::FontOptions (11.0f, juce::Font::bold)));
+        // The pedal letter-spaces these by 2px; spaced-out capitals are the
+        // closest a plain drawText gets.
+        g.drawText (name, kRuleInset + segment, top, kRuleGap, 14,
+                    juce::Justification::centred, false);
+    };
+
+    drawSection (kAmpSection, "A M P");
+    drawSection (kEqSection, "E Q");
+    drawSection (kCabSection, "C A B");
+    drawSection (kSpreadSection, "S P R E A D");
 }
 
 void NamStackAudioProcessorEditor::resized()
 {
-    // Four bands in the MOD pedal's order and shape: AMP (model + quality and
-    // gain staging), EQ (tone stack then graphic EQ on one line), CAB (one
-    // column per IR slot: file line above on / level / pan), DOUBLER.
-    auto bounds = getLocalBounds().reduced (12);
-    bounds.removeFromTop (34); // header
-
-    const int knobWidth = 96;
-
-    auto placeKnob = [] (juce::Rectangle<int>& area, int width,
-                         juce::Slider& slider, juce::Label& label)
+    const auto knobCell = [] (juce::Slider& slider, juce::Label& caption, int x, int top, int w)
     {
-        auto cell = area.removeFromLeft (width);
-        label.setBounds (cell.removeFromTop (16));
-        slider.setBounds (cell);
+        placeCaption (caption, x, top, w);
+        slider.setBounds (x, top + kCaptionH + kWidgetTop, w, kKnobH + kWidgetTop + kValueH);
+        slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, w, kValueH);
+    };
+
+    const auto faderCell = [] (juce::Slider& slider, juce::Label& caption, int x, int top, int w)
+    {
+        placeCaption (caption, x, top, w);
+        slider.setBounds (x, top + kCaptionH + kWidgetTop, w, kFaderH + kWidgetTop + kValueH);
+        slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, w, kValueH);
+    };
+
+    const auto switchCell = [] (juce::ToggleButton& button, juce::Label& caption, int x, int top, int w)
+    {
+        placeCaption (caption, x, top, w);
+        button.setBounds (x, top + kCaptionH + kWidgetTop, w, kKnobH);
+    };
+
+    const auto comboCell = [] (juce::ComboBox& box, juce::Label& caption, int x, int top, int w)
+    {
+        placeCaption (caption, x, top, w);
+        box.setBounds (x + 4, top + kCaptionH + kWidgetTop + (kKnobH - kComboH) / 2,
+                       w - 8, kComboH);
+    };
+
+    const auto fileRow = [] (juce::Label& caption, juce::TextButton& name, juce::TextButton& clear,
+                             int x, int top)
+    {
+        caption.setBounds (x, top, kFileW, kCaptionH);
+        name.setBounds (x, top + kCaptionH, kFileW - kClearW - 4, kFileBoxH);
+        clear.setBounds (x + kFileW - kClearW, top + kCaptionH, kClearW, kFileBoxH);
     };
 
     // ------------------------------------------------------------------ AMP
-    auto ampArea = bounds.removeFromTop (140);
-    ampGroup.setBounds (ampArea);
-    auto ampInner = ampArea.reduced (14, 22);
+    fileRow (modelFileLabel, modelNameButton, modelClearButton, kAmpModelX, kModelFileTop);
+    modelInfoLabel.setBounds (kAmpModelX, kModelFileTop + kCaptionH + kFileBoxH + 4, kFileW, 18);
 
-    // model column on the left, as the pedal's file selector
-    auto modelColumn = ampInner.removeFromLeft (330);
-    auto modelButtons = modelColumn.removeFromTop (26);
-    loadModelButton.setBounds (modelButtons.removeFromLeft (130));
-    modelButtons.removeFromLeft (8);
-    clearModelButton.setBounds (modelButtons.removeFromLeft (70));
-    modelColumn.removeFromTop (8);
-    modelNameLabel.setBounds (modelColumn.removeFromTop (24));
-    modelInfoLabel.setBounds (modelColumn.removeFromTop (20));
+    {
+        const std::pair<juce::Slider*, juce::Label*> ampCells[] = {
+            { &qualitySlider, &qualityLabel },
+            { &inputGainSlider, &inputGainLabel },
+            { &aidaParam1Slider, &aidaParam1Label },
+            { &aidaParam2Slider, &aidaParam2Label },
+            { &outputGainSlider, &outputGainLabel },
+        };
 
-    ampInner.removeFromLeft (24);
-
-    // pedal order: quality, input, param 1, param 2, output
-    placeKnob (ampInner, knobWidth, qualitySlider, qualityLabel);
-    placeKnob (ampInner, knobWidth, inputGainSlider, inputGainLabel);
-    placeKnob (ampInner, knobWidth, aidaParam1Slider, aidaParam1Label);
-    placeKnob (ampInner, knobWidth, aidaParam2Slider, aidaParam2Label);
-    placeKnob (ampInner, knobWidth, outputGainSlider, outputGainLabel);
-
-    bounds.removeFromTop (8);
+        int x = kAmpKnobsX;
+        for (const auto& cell : ampCells)
+        {
+            knobCell (*cell.first, *cell.second, x, kAmpRow, kCell);
+            x += kCell;
+        }
+    }
 
     // ------------------------------------------------------------------- EQ
-    // tone stack then graphic EQ on a single line, as on the pedal
-    auto eqArea = bounds.removeFromTop (190);
-    eqGroup.setBounds (eqArea);
-    auto eqInner = eqArea.reduced (14, 22);
-
-    auto tsColumn = eqInner.removeFromLeft (230);
-    toneOnButton.setBounds (tsColumn.removeFromTop (24));
-    tsColumn.removeFromTop (8);
-    toneStackBox.setBounds (tsColumn.removeFromTop (26));
-    tsColumn.removeFromTop (8);
-    tonePositionBox.setBounds (tsColumn.removeFromTop (26));
-
-    eqInner.removeFromLeft (16);
-    placeKnob (eqInner, knobWidth, bassSlider, bassLabel);
-    placeKnob (eqInner, knobWidth, midSlider, midLabel);
-    placeKnob (eqInner, knobWidth, trebleSlider, trebleLabel);
-
-    eqInner.removeFromLeft (16);
-    auto geqColumn = eqInner.removeFromLeft (170);
-    geqOnButton.setBounds (geqColumn.removeFromTop (24));
-    geqColumn.removeFromTop (8);
-    geqPositionBox.setBounds (geqColumn.removeFromTop (26));
-
-    eqInner.removeFromLeft (16);
-    const auto faderWidth = eqInner.getWidth() / nsdsp::GraphicEQ::numBands;
-
-    for (int band = 0; band < nsdsp::GraphicEQ::numBands; ++band)
     {
-        auto area = eqInner.removeFromLeft (faderWidth);
-        geqLabels[band].setBounds (area.removeFromTop (16));
-        geqSliders[band].setBounds (area);
-    }
+        int x = kEqRowX;
+        comboCell (toneStackBox, toneStackLabel, x, kEqRow, kStackCell);      x += kStackCell;
+        switchCell (toneOnButton, toneOnLabel, x, kEqRow, kEqCell);           x += kEqCell;
+        comboCell (tonePositionBox, tonePositionLabel, x, kEqRow, kEqCell);   x += kEqCell;
+        knobCell (bassSlider, bassLabel, x, kEqRow, kEqCell);                 x += kEqCell;
+        knobCell (midSlider, midLabel, x, kEqRow, kEqCell);                   x += kEqCell;
+        knobCell (trebleSlider, trebleLabel, x, kEqRow, kEqCell);             x += kEqCell;
+        switchCell (toneCompButton, toneCompLabel, x, kEqRow, kEqCell);       x += kEqCell;
+        switchCell (geqOnButton, geqOnLabel, x, kEqRow, kEqCell);             x += kEqCell;
+        comboCell (geqPositionBox, geqPositionLabel, x, kEqRow, kEqCell);     x += kEqCell;
 
-    bounds.removeFromTop (8);
+        for (int band = 0; band < nsdsp::GraphicEQ::numBands; ++band)
+        {
+            faderCell (geqSliders[band], geqLabels[band], x, kEqRow, kFaderCell);
+            x += kFaderCell;
+        }
+    }
 
     // ------------------------------------------------------------------ CAB
-    // one column per IR slot: file line above on / level / pan
-    auto irArea = bounds.removeFromTop (216);
-    irGroup.setBounds (irArea);
-    auto irInner = irArea.reduced (14, 22);
-
-    const auto slotWidth = irInner.getWidth() / nsdsp::IRStack::numSlots;
-
-    for (auto& row : irRows)
+    for (int i = 0; i < nsdsp::IRStack::numSlots; ++i)
     {
-        auto slot = irInner.removeFromLeft (slotWidth).reduced (6, 0);
+        auto& slot = irSlots[i];
+        const auto slotX = kCabRowX + i * kSlotW;
 
-        auto fileLine = slot.removeFromTop (24);
-        row.loadButton.setBounds (fileLine.removeFromLeft (86));
-        fileLine.removeFromLeft (6);
-        row.clearButton.setBounds (fileLine.removeFromLeft (26));
-        slot.removeFromTop (4);
-        row.nameLabel.setBounds (slot.removeFromTop (20));
-        slot.removeFromTop (4);
-
-        row.onButton.setBounds (slot.removeFromLeft (52)
-                                    .withHeight (26)
-                                    .translated (0, slot.getHeight() / 2 - 13));
-        placeKnob (slot, (slot.getWidth()) / 2, row.gainSlider, row.gainLabel);
-        placeKnob (slot, slot.getWidth(), row.panSlider, row.panLabel);
+        fileRow (slot.fileLabel, slot.nameButton, slot.clearButton, slotX, kIrFileTop);
+        switchCell (slot.onButton, slot.onLabel, slotX, kCabRow, kCell);
+        knobCell (slot.gainSlider, slot.gainLabel, slotX + kCell, kCabRow, kCell);
+        knobCell (slot.panSlider, slot.panLabel, slotX + 2 * kCell, kCabRow, kCell);
     }
 
-    bounds.removeFromTop (8);
-
-    // -------------------------------------------------------------- DOUBLER
-    auto doublerArea = bounds.removeFromTop (150);
-    doublerGroup.setBounds (doublerArea);
-    auto doublerInner = doublerArea.reduced (14, 22);
-
-    // centred like the pedal's doubler row
-    const int doublerWidth = 60 + 5 * knobWidth;
-    doublerInner.removeFromLeft ((doublerInner.getWidth() - doublerWidth) / 2);
-
-    doublerOnButton.setBounds (doublerInner.removeFromLeft (60)
-                                   .withHeight (26)
-                                   .translated (0, doublerInner.getHeight() / 2 - 13));
-
-    placeKnob (doublerInner, knobWidth, doublerMixSlider, doublerMixLabel);
-    placeKnob (doublerInner, knobWidth, doublerTimeSlider, doublerTimeLabel);
-    placeKnob (doublerInner, knobWidth, doublerDetuneSlider, doublerDetuneLabel);
-    placeKnob (doublerInner, knobWidth, doublerHumanizeSlider, doublerHumanizeLabel);
-    placeKnob (doublerInner, knobWidth, doublerWidthSlider, doublerWidthLabel);
+    // --------------------------------------------------------------- SPREAD
+    {
+        int x = kSpreadRowX;
+        switchCell (spreadOnButton, spreadOnLabel, x, kSpreadRow, kCell);                     x += kCell;
+        knobCell (spreadOffsetSlider, spreadOffsetLabel, x, kSpreadRow, kCell);               x += kCell;
+        knobCell (spreadWobbleSlider, spreadWobbleLabel, x, kSpreadRow, kCell);               x += kCell;
+        switchCell (spreadWobbleOnButton, spreadWobbleOnLabel, x, kSpreadRow, kCell);         x += kCell;
+        knobCell (spreadCrossoverSlider, spreadCrossoverLabel, x, kSpreadRow, kCell);         x += kCell;
+        switchCell (spreadCrossoverOnButton, spreadCrossoverOnLabel, x, kSpreadRow, kCell);   x += kCell;
+        switchCell (spreadDiffuseOnButton, spreadDiffuseOnLabel, x, kSpreadRow, kCell);
+    }
 }

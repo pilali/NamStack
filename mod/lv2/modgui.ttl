@@ -11,7 +11,7 @@
         modgui:brand "Pilali" ;
         modgui:label "NamStack" ;
         # Display order = signal-flow reading order: model quality, gain
-        # staging, tone stack, graphic EQ, IR levels, doubler. The lv2:index
+        # staging, tone stack, graphic EQ, IR levels, spread. The lv2:index
         # here is only the modgui list position, not the plugin port index.
         modgui:port [
             lv2:index 0 ;
@@ -59,103 +59,111 @@
             lv2:name "Treble" ;
         ] , [
             lv2:index 11 ;
+            lv2:symbol "ts_comp" ;
+            lv2:name "Tone Stack Level Comp" ;
+        ] , [
+            lv2:index 12 ;
             lv2:symbol "geq_on" ;
             lv2:name "Graphic EQ On" ;
         ] , [
-            lv2:index 12 ;
+            lv2:index 13 ;
             lv2:symbol "geq_position" ;
             lv2:name "Graphic EQ Position" ;
         ] , [
-            lv2:index 13 ;
+            lv2:index 14 ;
             lv2:symbol "geq_80" ;
             lv2:name "EQ 80 Hz" ;
         ] , [
-            lv2:index 14 ;
+            lv2:index 15 ;
             lv2:symbol "geq_240" ;
             lv2:name "EQ 240 Hz" ;
         ] , [
-            lv2:index 15 ;
+            lv2:index 16 ;
             lv2:symbol "geq_750" ;
             lv2:name "EQ 750 Hz" ;
         ] , [
-            lv2:index 16 ;
+            lv2:index 17 ;
             lv2:symbol "geq_2200" ;
             lv2:name "EQ 2200 Hz" ;
         ] , [
-            lv2:index 17 ;
+            lv2:index 18 ;
             lv2:symbol "geq_6600" ;
             lv2:name "EQ 6600 Hz" ;
         ] , [
-            lv2:index 18 ;
+            lv2:index 19 ;
             lv2:symbol "ir1_on" ;
             lv2:name "IR 1 On" ;
         ] , [
-            lv2:index 19 ;
+            lv2:index 20 ;
             lv2:symbol "ir1_gain" ;
             lv2:name "IR 1 Level" ;
         ] , [
-            lv2:index 20 ;
+            lv2:index 21 ;
             lv2:symbol "ir1_pan" ;
             lv2:name "IR 1 Pan" ;
         ] , [
-            lv2:index 21 ;
+            lv2:index 22 ;
             lv2:symbol "ir2_on" ;
             lv2:name "IR 2 On" ;
         ] , [
-            lv2:index 22 ;
+            lv2:index 23 ;
             lv2:symbol "ir2_gain" ;
             lv2:name "IR 2 Level" ;
         ] , [
-            lv2:index 23 ;
+            lv2:index 24 ;
             lv2:symbol "ir2_pan" ;
             lv2:name "IR 2 Pan" ;
         ] , [
-            lv2:index 24 ;
+            lv2:index 25 ;
             lv2:symbol "ir3_on" ;
             lv2:name "IR 3 On" ;
         ] , [
-            lv2:index 25 ;
+            lv2:index 26 ;
             lv2:symbol "ir3_gain" ;
             lv2:name "IR 3 Level" ;
         ] , [
-            lv2:index 26 ;
+            lv2:index 27 ;
             lv2:symbol "ir3_pan" ;
             lv2:name "IR 3 Pan" ;
         ] , [
-            lv2:index 27 ;
+            lv2:index 28 ;
             lv2:symbol "ir4_on" ;
             lv2:name "IR 4 On" ;
         ] , [
-            lv2:index 28 ;
+            lv2:index 29 ;
             lv2:symbol "ir4_gain" ;
             lv2:name "IR 4 Level" ;
         ] , [
-            lv2:index 29 ;
+            lv2:index 30 ;
             lv2:symbol "ir4_pan" ;
             lv2:name "IR 4 Pan" ;
         ] , [
-            lv2:index 30 ;
-            lv2:symbol "dbl_on" ;
-            lv2:name "Doubler On" ;
-        ] , [
             lv2:index 31 ;
-            lv2:symbol "dbl_mix" ;
-            lv2:name "Doubler Mix" ;
+            lv2:symbol "spr_on" ;
+            lv2:name "Spread On" ;
         ] , [
             lv2:index 32 ;
-            lv2:symbol "dbl_time" ;
-            lv2:name "Doubler Time" ;
+            lv2:symbol "spr_offset" ;
+            lv2:name "Spread Offset" ;
         ] , [
             lv2:index 33 ;
-            lv2:symbol "dbl_detune" ;
-            lv2:name "Doubler Detune" ;
+            lv2:symbol "spr_wobble" ;
+            lv2:name "Spread Wobble" ;
         ] , [
             lv2:index 34 ;
-            lv2:symbol "dbl_humanize" ;
-            lv2:name "Doubler Humanize" ;
+            lv2:symbol "spr_wobble_on" ;
+            lv2:name "Spread Wobble On" ;
         ] , [
             lv2:index 35 ;
-            lv2:symbol "dbl_width" ;
-            lv2:name "Doubler Width" ;
+            lv2:symbol "spr_xover" ;
+            lv2:name "Spread Crossover" ;
+        ] , [
+            lv2:index 36 ;
+            lv2:symbol "spr_xover_on" ;
+            lv2:name "Spread Crossover On" ;
+        ] , [
+            lv2:index 37 ;
+            lv2:symbol "spr_diffuse_on" ;
+            lv2:name "Spread Diffuse On" ;
         ] ;
     ] .

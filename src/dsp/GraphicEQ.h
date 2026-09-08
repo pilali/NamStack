@@ -1,5 +1,7 @@
 #pragma once
 
+#include "BypassRamp.h"
+
 #include <array>
 
 namespace nsdsp
@@ -66,6 +68,22 @@ public:
     void prepare (double sampleRate);
     void reset();
 
+    // Per block, before processBlock(). Engaging and bypassing are ~25 ms
+    // crossfades rather than hard switches, and so is a move to the other side
+    // of the neural model: the gyrator branches' state belongs to the point
+    // they were reading. See BypassRamp. `pre` is which side this block runs
+    // on. Slider moves are not a fade -- the pot positions are continuous, and
+    // carrying the state across is what the circuit does.
+    void setEngaged (bool engaged, bool pre);
+
+    // False = settled in bypass; processBlock() is a no-op and can be skipped.
+    bool isRunning() const { return ramp.isRunning(); }
+
+    // Which side of the model processBlock() must be called on *now*. During
+    // the fade-out half of a pre/post move this is still the old side, where
+    // the state being faded out came from.
+    bool runsPre() const { return activePre; }
+
     // gainsDb: numBands values, each in [-maxGainDb, +maxGainDb]. The value is
     // the band's own setting, i.e. what it would do on its own; once several
     // sliders leave the centre they pull on each other, exactly as the circuit
@@ -105,6 +123,8 @@ private:
     double yDen = 0; // 1/Rf   + SUM G_i k_i
     double invYDen = 0;
 
+    BypassRamp ramp;
+    bool activePre = false;
     bool dirty = true;
 };
 

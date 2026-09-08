@@ -72,8 +72,8 @@
 	rdfs:comment """
 Neural amp modeler (NAM and AIDA-X / RTNeural models) with switchable classic
 tone stacks (Fender, Marshall, Mesa Boogie, Vox, Ampeg, Soldano), a 4-slot IR
-mixer with per-IR level and pan, and a Neural DSP style doubler at the end of
-the chain.
+mixer with per-IR level and pan, and an ADT-style stereo image ("spread") at
+the end of the chain.
 """ ;
 
 	lv2:port [
@@ -168,8 +168,8 @@ the chain.
 		lv2:minimum 0 ;
 		lv2:maximum 1 ;
 		lv2:portProperty lv2:integer , lv2:enumeration ;
-		lv2:scalePoint [ rdfs:label "Pre (before amp)" ; rdf:value 0 ] ,
-		               [ rdfs:label "Post (after amp)" ; rdf:value 1 ] ;
+		lv2:scalePoint [ rdfs:label "Pre" ; rdf:value 0 ] ,
+		               [ rdfs:label "Post" ; rdf:value 1 ] ;
 	] , [
 		a lv2:ControlPort , lv2:InputPort ;
 		lv2:index 11 ;
@@ -301,8 +301,9 @@ the chain.
 	] , [
 		a lv2:ControlPort , lv2:InputPort ;
 		lv2:index 26 ;
-		lv2:symbol "dbl_on" ;
-		lv2:name "Doubler On" ;
+		lv2:symbol "spr_on" ;
+		lv2:name "Spread On" ;
+		rdfs:comment "ADT-style stereo image: one channel keeps the performance, the other gets a slightly late, wobbling copy. Replaces the pitch-shift doubler that used to sit on ports 26-31." ;
 		lv2:default 0 ;
 		lv2:minimum 0 ;
 		lv2:maximum 1 ;
@@ -310,45 +311,52 @@ the chain.
 	] , [
 		a lv2:ControlPort , lv2:InputPort ;
 		lv2:index 27 ;
-		lv2:symbol "dbl_mix" ;
-		lv2:name "Doubler Mix" ;
-		lv2:default 0.5 ;
-		lv2:minimum 0.0 ;
-		lv2:maximum 1.0 ;
-	] , [
-		a lv2:ControlPort , lv2:InputPort ;
-		lv2:index 28 ;
-		lv2:symbol "dbl_time" ;
-		lv2:name "Doubler Time" ;
-		lv2:default 18.0 ;
-		lv2:minimum 5.0 ;
-		lv2:maximum 50.0 ;
+		lv2:symbol "spr_offset" ;
+		lv2:name "Spread Offset" ;
+		rdfs:comment "Signed delay of the doubled side. The sign picks which channel is late (positive = right), the magnitude sets the delay; the centre is exactly dual mono." ;
+		lv2:default 15.0 ;
+		lv2:minimum -24.0 ;
+		lv2:maximum 24.0 ;
 		units:unit units:ms ;
 	] , [
 		a lv2:ControlPort , lv2:InputPort ;
-		lv2:index 29 ;
-		lv2:symbol "dbl_detune" ;
-		lv2:name "Doubler Detune" ;
-		lv2:default 9.0 ;
+		lv2:index 28 ;
+		lv2:symbol "spr_wobble" ;
+		lv2:name "Spread Wobble" ;
+		rdfs:comment "Depth of the random-walk drift of the delay time, up to +-1.2 ms. Absolute, not relative to the offset." ;
+		lv2:default 0.25 ;
 		lv2:minimum 0.0 ;
-		lv2:maximum 25.0 ;
-		units:unit units:cent ;
+		lv2:maximum 1.0 ;
+	] , [
+		a lv2:ControlPort , lv2:InputPort ;
+		lv2:index 29 ;
+		lv2:symbol "spr_wobble_on" ;
+		lv2:name "Spread Wobble On" ;
+		lv2:default 1 ;
+		lv2:minimum 0 ;
+		lv2:maximum 1 ;
+		lv2:portProperty lv2:integer , lv2:toggled ;
 	] , [
 		a lv2:ControlPort , lv2:InputPort ;
 		lv2:index 30 ;
-		lv2:symbol "dbl_humanize" ;
-		lv2:name "Doubler Humanize" ;
-		lv2:default 0.3 ;
-		lv2:minimum 0.0 ;
-		lv2:maximum 1.0 ;
+		lv2:symbol "spr_xover" ;
+		lv2:name "Spread Crossover" ;
+		rdfs:comment "Everything below this stays out of the delay, so the lows fold down to mono cleanly." ;
+		lv2:default 130.0 ;
+		lv2:minimum 32.5 ;
+		lv2:maximum 520.0 ;
+		lv2:portProperty pprop:logarithmic ;
+		units:unit units:hz ;
 	] , [
 		a lv2:ControlPort , lv2:InputPort ;
 		lv2:index 31 ;
-		lv2:symbol "dbl_width" ;
-		lv2:name "Doubler Width" ;
-		lv2:default 1.0 ;
-		lv2:minimum 0.0 ;
-		lv2:maximum 1.0 ;
+		lv2:symbol "spr_xover_on" ;
+		lv2:name "Spread Crossover On" ;
+		rdfs:comment "Off: the whole band is doubled -- maximum width, mono safety traded away." ;
+		lv2:default 1 ;
+		lv2:minimum 0 ;
+		lv2:maximum 1 ;
+		lv2:portProperty lv2:integer , lv2:toggled ;
 	] , [
 		a lv2:ControlPort , lv2:InputPort ;
 		lv2:index 32 ;
@@ -395,8 +403,8 @@ the chain.
 		lv2:minimum 0 ;
 		lv2:maximum 1 ;
 		lv2:portProperty lv2:integer , lv2:enumeration ;
-		lv2:scalePoint [ rdfs:label "Pre (before amp)" ; rdf:value 0 ] ,
-		               [ rdfs:label "Post (after amp)" ; rdf:value 1 ] ;
+		lv2:scalePoint [ rdfs:label "Pre" ; rdf:value 0 ] ,
+		               [ rdfs:label "Post" ; rdf:value 1 ] ;
 	] , [
 		a lv2:ControlPort , lv2:InputPort ;
 		lv2:index 37 ;
@@ -442,4 +450,24 @@ the chain.
 		lv2:minimum -12.0 ;
 		lv2:maximum 12.0 ;
 		units:unit units:db ;
+	] , [
+		a lv2:ControlPort , lv2:InputPort ;
+		lv2:index 42 ;
+		lv2:symbol "spr_diffuse_on" ;
+		lv2:name "Spread Diffuse On" ;
+		rdfs:comment "Allpass cascade on the late side. Off leaves it a pure delay: more coherent, more comb-like on a mono sum." ;
+		lv2:default 1 ;
+		lv2:minimum 0 ;
+		lv2:maximum 1 ;
+		lv2:portProperty lv2:integer , lv2:toggled ;
+	] , [
+		a lv2:ControlPort , lv2:InputPort ;
+		lv2:index 43 ;
+		lv2:symbol "ts_comp" ;
+		lv2:name "Tone Stack Level Comp" ;
+		rdfs:comment "Makes up the passive stack's insertion loss so every model reads 0 dB with the three knobs at noon. Off = the bare circuit, which loses 4.6 to 13.1 dB depending on the model." ;
+		lv2:default 1 ;
+		lv2:minimum 0 ;
+		lv2:maximum 1 ;
+		lv2:portProperty lv2:integer , lv2:toggled ;
 	] .

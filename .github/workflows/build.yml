@@ -134,11 +134,46 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
 
+      # The runner is Apple silicon, so without CMAKE_OSX_ARCHITECTURES the
+      # build would quietly come out arm64-only. Assert what we ship: every
+      # binary is Universal 2, its x86_64 slice runs back to Catalina, and its
+      # arm64 slice to Big Sur (the oldest macOS that ever ran on Apple
+      # silicon -- the toolchain clamps that slice to 11.0 regardless of the
+      # 10.15 deployment target).
+      - name: Check the binaries are universal and run back to 10.15
+        if: matrix.name == 'macos'
+        run: |
+          set -e
+          check() {
+            bin="$1"
+            lipo -info "$bin"
+            if ! lipo "$bin" -verify_arch arm64 x86_64; then
+              echo "::error::$bin is not a Universal 2 binary"
+              exit 1
+            fi
+            for arch in x86_64 arm64; do
+              min=$(otool -arch "$arch" -l "$bin" \
+                    | awk '/LC_BUILD_VERSION/{f=1} f && /minos/{print $2; exit}
+                           /LC_VERSION_MIN_MACOSX/{g=1} g && /version /{print $2; exit}')
+              echo "  $arch minos: $min"
+              want="10.15"; [ "$arch" = "arm64" ] && want="11.0"
+              if [ "$min" != "$want" ]; then
+                echo "::error::$bin ($arch) targets macOS $min, expected $want"
+                exit 1
+              fi
+            done
+          }
+          check "build/NamStack_artefacts/Release/VST3/NamStack.vst3/Contents/MacOS/NamStack"
+          check "build/NamStack_artefacts/Release/AU/NamStack.component/Contents/MacOS/NamStack"
+          check "build/NamStack_artefacts/Release/LV2/NamStack.lv2/libNamStack.so"
+          check "build/NamStack_artefacts/Release/Standalone/NamStack.app/Contents/MacOS/NamStack"
+
       - uses: actions/upload-artifact@v4
         with:
           name: NamStack-${{ matrix.name }}
           path: |
             build/NamStack_artefacts/**/VST3/**
             build/NamStack_artefacts/**/LV2/**
+            build/NamStack_artefacts/**/AU/**
             build/NamStack_artefacts/**/Standalone/**
           if-no-files-found: error

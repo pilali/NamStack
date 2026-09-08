@@ -21,9 +21,10 @@
 #include <lv2/worker/worker.h>
 
 #include "core/Convolver.h"
+#include "core/DenormalGuard.h"
 #include "core/IRLoader.h"
 #include "core/IRMixer.h"
-#include "dsp/Doubler.h"
+#include "dsp/Spread.h"
 #include "dsp/NeuralModel.h"
 #include "dsp/GraphicEQ.h"
 #include "dsp/ToneStack.h"
@@ -83,12 +84,17 @@ enum PortIndex
     kPortIr4On,
     kPortIr4Gain,
     kPortIr4Pan,
-    kPortDblOn,
-    kPortDblMix,
-    kPortDblTime,
-    kPortDblDetune,
-    kPortDblHumanize,
-    kPortDblWidth,
+    // The doubler these six indices used to carry was replaced by Spread (an
+    // ADT-style image, see dsp/Spread.h). Its controls have no counterpart --
+    // there is no Mix, Detune or Humanize in the new engine -- so the indices
+    // are reused rather than kept as dead ports; the .ttl is the contract and
+    // it changed with them.
+    kPortSprOn,
+    kPortSprOffset,
+    kPortSprWobble,
+    kPortSprWobbleOn,
+    kPortSprCrossover,
+    kPortSprCrossoverOn,
     kPortOutGain,
     kPortQuality,
     // Appended after kPortQuality on purpose: LV2 identifies control ports by
@@ -102,6 +108,8 @@ enum PortIndex
     kPortGeqBand3, // 750 Hz
     kPortGeqBand4, // 2200 Hz
     kPortGeqBand5, // 6600 Hz
+    kPortSprDiffuseOn, // seventh spread control; six fit in the old doubler block
+    kPortTsComp,
     kPortCount
 };
 
@@ -192,7 +200,7 @@ struct NamStackMod
     nsdsp::ToneStack toneStack;
     nsdsp::GraphicEQ graphicEq;
     nsdsp::IRMixer irMixer;
-    nsdsp::Doubler doubler;
+    nsdsp::Spread spread;
 
     std::vector<float> mono, busL, busR;
 
@@ -225,7 +233,7 @@ void prepareDsp (NamStackMod* self)
     self->toneStack.prepare (self->sampleRate);
     self->graphicEq.prepare (self->sampleRate);
     self->irMixer.prepare (self->sampleRate, self->partitionSize, std::max (self->maxBlockSize, kMaxChunk));
-    self->doubler.prepare (self->sampleRate, self->maxBlockSize);
+    self->spread.prepare (self->sampleRate, self->maxBlockSize);
 
     self->mono.assign ((size_t) kMaxChunk, 0.0f);
     self->busL.assign ((size_t) kMaxChunk, 0.0f);
@@ -565,7 +573,7 @@ void activate (LV2_Handle instance)
     self->toneStack.reset();
     self->graphicEq.reset();
     self->irMixer.reset();
-    self->doubler.reset();
+    self->spread.reset();
     self->activated = true;
 }
 
@@ -577,6 +585,13 @@ float param (const NamStackMod* self, PortIndex port, float fallback = 0.0f)
 void run (LV2_Handle instance, uint32_t nSamples)
 {
     auto* self = static_cast<NamStackMod*> (instance);
+
+    // Flush-to-zero for this callback, restored on the way out. Without it the
+    // filter states walk into the subnormal range as soon as the player stops
+    // and the whole chain falls off the FPU's fast path -- 25x slower on the
+    // measured x86-64 case, and the JUCE build has had juce::ScopedNoDenormals
+    // for this all along. See core/DenormalGuard.h.
+    const nsdsp::DenormalGuard denormalGuard;
 
     // set up the notify port forge
     const auto notifyCapacity = self->notify->atom.size;
@@ -645,7 +660,8 @@ void run (LV2_Handle instance, uint32_t nSamples)
     self->toneStack.setParams ((int) param (self, kPortTsModel),
                                param (self, kPortTsBass, 0.5f),
                                param (self, kPortTsMid, 0.5f),
-                               param (self, kPortTsTreble, 0.5f));
+                               param (self, kPortTsTreble, 0.5f),
+                               param (self, kPortTsComp, 1.0f) > 0.5f);
     const bool tsIsPre = param (self, kPortTsPosition) < 0.5f;
     const bool tsOn = param (self, kPortTsOn, 1.0f) > 0.5f;
 
@@ -657,18 +673,35 @@ void run (LV2_Handle instance, uint32_t nSamples)
     const bool geqIsPre = param (self, kPortGeqPosition, 1.0f) < 0.5f;
     const bool geqOn = param (self, kPortGeqOn) > 0.5f;
 
+    // Engage, bypass, a move across the model and a change of amplifier are all
+    // ~25 ms crossfades inside the filters (see dsp/BypassRamp.h), so both are
+    // told their state once per callback and then called at their own tap
+    // point; each is a no-op while it is settled in bypass.
+    self->toneStack.setEngaged (tsOn, tsIsPre);
+    self->graphicEq.setEngaged (geqOn, geqIsPre);
+
+    // Each filter says which side to run it on: mid-move that is still the old
+    // one, so its fade-out reads the signal its state came from.
+    const bool tsRunsPre = self->toneStack.runsPre();
+    const bool geqRunsPre = self->graphicEq.runsPre();
+
     for (int slot = 0; slot < 4; ++slot)
         self->irMixer.setSlotParams (slot,
                                      param (self, (PortIndex) (kPortIr1On + slot * 3)) > 0.5f,
                                      param (self, (PortIndex) (kPortIr1Gain + slot * 3)),
                                      param (self, (PortIndex) (kPortIr1Pan + slot * 3)));
 
-    self->doubler.setParams (param (self, kPortDblOn) > 0.5f,
-                             param (self, kPortDblTime, 18.0f),
-                             param (self, kPortDblDetune, 9.0f),
-                             param (self, kPortDblHumanize, 0.3f),
-                             param (self, kPortDblWidth, 1.0f),
-                             param (self, kPortDblMix, 0.5f));
+    {
+        nsdsp::Spread::Params sp;
+        sp.offsetMs = param (self, kPortSprOffset, 15.0f);
+        sp.wobbleDepth = param (self, kPortSprWobbleOn, 1.0f) > 0.5f
+                             ? param (self, kPortSprWobble, 0.25f)
+                             : 0.0f;
+        sp.crossoverHz = param (self, kPortSprCrossover, nsdsp::Spread::defaultCrossoverHz);
+        sp.crossoverOn = param (self, kPortSprCrossoverOn, 1.0f) > 0.5f;
+        sp.diffuseOn = param (self, kPortSprDiffuseOn, 1.0f) > 0.5f;
+        self->spread.setParams (param (self, kPortSprOn) > 0.5f, sp);
+    }
 
     if (self->model != nullptr)
         self->model->setConditioning (param (self, kPortAidaParam1, 0.5f),
@@ -711,22 +744,23 @@ void run (LV2_Handle instance, uint32_t nSamples)
         // before the graphic EQ within both the pre and the post block is what
         // gives the required ordering: when the two land on the same side, the
         // graphic EQ follows the tone stack.
-        if (tsIsPre && tsOn)
+        if (tsRunsPre)
             self->toneStack.processBlock (mono, n);
-        if (geqIsPre && geqOn)
+        if (geqRunsPre)
             self->graphicEq.processBlock (mono, n);
 
         if (self->model != nullptr)
             self->model->process (mono, n);
 
-        if (! tsIsPre && tsOn)
+        if (! tsRunsPre)
             self->toneStack.processBlock (mono, n);
-        if (! geqIsPre && geqOn)
+        if (! geqRunsPre)
             self->graphicEq.processBlock (mono, n);
 
         self->irMixer.process (mono, self->busL.data(), self->busR.data(), n);
 
-        self->doubler.process (self->busL.data(), self->busR.data(), n);
+        if (self->spread.isRunning())
+            self->spread.process (self->busL.data(), self->busR.data(), n);
 
         for (int i = 0; i < n; ++i)
         {

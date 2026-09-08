@@ -3,7 +3,7 @@
 
     <div class="ns-header">
         <h1>NamStack</h1>
-        <span class="ns-subtitle">NAM &middot; AIDA-X &middot; TONE STACK &middot; 5-BAND EQ &middot; IR MIXER &middot; DOUBLER</span>
+        <span class="ns-subtitle">NAM &middot; AIDA-X &middot; TONE STACK &middot; 5-BAND EQ &middot; IR MIXER &middot; SPREAD</span>
         <span class="ns-brand">Pilali</span>
     </div>
 
@@ -80,6 +80,14 @@
             <p>TREBLE</p>
             <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="ts_treble"></div>
             <div class="ns-value" mod-role="input-control-value" mod-port-symbol="ts_treble"></div>
+        </div>
+        <!-- The stack is a passive circuit: it loses 4.6 to 13.1 dB at noon
+             depending on the model, which a real amp's next gain stage makes
+             up. On (the default) puts every model's noon back at 0 dB. -->
+        <div class="ns-ctrl">
+            <p>LEVEL COMP</p>
+            <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="ts_comp"></div>
+            <div class="ns-value"></div>
         </div>
         <div class="ns-ctrl">
             <p>EQ ON</p>
@@ -185,38 +193,46 @@
         </div>
     </div>
 
-    <!-- Row 4: the doubler, all of it. -->
-    <div class="ns-section ns-section-dbl"><span>DOUBLER</span></div>
-    <div class="ns-row ns-row-dbl">
+    <!-- Row 4: the stereo image. OFFSET is the one musical control (its sign
+         picks which channel is late, centre is exactly dual mono); the three
+         switches to its right gate the deck sections, and each sits next to
+         the knob it governs. -->
+    <div class="ns-section ns-section-spr"><span>SPREAD</span></div>
+    <div class="ns-row ns-row-spr">
         <div class="ns-ctrl">
-            <p>DOUBLER</p>
-            <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="dbl_on"></div>
+            <p>SPREAD</p>
+            <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="spr_on"></div>
             <div class="ns-value"></div>
         </div>
         <div class="ns-ctrl">
-            <p>MIX</p>
-            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="dbl_mix"></div>
-            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="dbl_mix"></div>
+            <p>OFFSET</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="spr_offset"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="spr_offset"></div>
         </div>
         <div class="ns-ctrl">
-            <p>TIME</p>
-            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="dbl_time"></div>
-            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="dbl_time"></div>
+            <p>WOBBLE</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="spr_wobble"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="spr_wobble"></div>
         </div>
         <div class="ns-ctrl">
-            <p>DETUNE</p>
-            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="dbl_detune"></div>
-            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="dbl_detune"></div>
+            <p>WOBBLE ON</p>
+            <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="spr_wobble_on"></div>
+            <div class="ns-value"></div>
         </div>
         <div class="ns-ctrl">
-            <p>HUMANIZE</p>
-            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="dbl_humanize"></div>
-            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="dbl_humanize"></div>
+            <p>CROSSOVER</p>
+            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="spr_xover"></div>
+            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="spr_xover"></div>
         </div>
         <div class="ns-ctrl">
-            <p>WIDTH</p>
-            <div class="ns-knob" mod-role="input-control-port" mod-port-symbol="dbl_width"></div>
-            <div class="ns-value" mod-role="input-control-value" mod-port-symbol="dbl_width"></div>
+            <p>X-OVER ON</p>
+            <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="spr_xover_on"></div>
+            <div class="ns-value"></div>
+        </div>
+        <div class="ns-ctrl">
+            <p>DIFFUSE</p>
+            <div class="ns-switch" mod-role="input-control-port" mod-port-symbol="spr_diffuse_on"></div>
+            <div class="ns-value"></div>
         </div>
     </div>
 

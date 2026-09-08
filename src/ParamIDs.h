@@ -21,6 +21,9 @@ inline constexpr auto tsPosition = "ts_position";
 inline constexpr auto tsBass = "ts_bass";
 inline constexpr auto tsMid = "ts_mid";
 inline constexpr auto tsTreble = "ts_treble";
+// Makeup gain that puts each model's noon setting at 0 dB, cancelling the
+// insertion loss of the passive circuit (see nsdsp::ToneStack).
+inline constexpr auto tsComp = "ts_comp";
 
 // Mesa/Boogie-style 5-band graphic EQ. Band ids are geq_80 .. geq_6600, built
 // from the centre frequencies in nsdsp::GraphicEQ so the two cannot drift apart.
@@ -37,10 +40,14 @@ inline juce::String irOn(int slot) { return "ir" + juce::String(slot + 1) + "_on
 inline juce::String irGain(int slot) { return "ir" + juce::String(slot + 1) + "_gain"; }
 inline juce::String irPan(int slot) { return "ir" + juce::String(slot + 1) + "_pan"; }
 
-inline constexpr auto dblOn = "dbl_on";
-inline constexpr auto dblMix = "dbl_mix";
-inline constexpr auto dblTime = "dbl_time";
-inline constexpr auto dblDetune = "dbl_detune";
-inline constexpr auto dblHumanize = "dbl_humanize";
-inline constexpr auto dblWidth = "dbl_width";
+// ADT-style stereo image (nsdsp::Spread), replacing the earlier doubler. The
+// old dbl_* ids are gone: the engine has no equivalent of Mix, Detune or
+// Humanize, so carrying them over would have meant knobs that do nothing.
+inline constexpr auto sprOn = "spr_on";
+inline constexpr auto sprOffset = "spr_offset";
+inline constexpr auto sprWobble = "spr_wobble";
+inline constexpr auto sprWobbleOn = "spr_wobble_on";
+inline constexpr auto sprCrossover = "spr_xover";
+inline constexpr auto sprCrossoverOn = "spr_xover_on";
+inline constexpr auto sprDiffuseOn = "spr_diffuse_on";
 } // namespace ParamIDs

@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.22)
 
+# macOS: Universal 2 binaries that still load on Intel machines running
+# Catalina. Both must be set before project() to take effect; they are cache
+# defaults, so a local build can override them (e.g. host-arch only for a
+# faster edit cycle). The arm64 slice is clamped to 11.0 by the toolchain --
+# macOS never ran on Apple silicon before Big Sur -- so 10.15 governs the
+# x86_64 slice, which is the only one a Catalina machine can be.
+set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "macOS architectures")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "macOS deployment target")
+
 project(NamStack VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -99,7 +108,7 @@ add_library(namstack_core STATIC
     src/dsp/NamArchitectures.cpp
     src/dsp/ToneStack.cpp
     src/dsp/GraphicEQ.cpp
-    src/dsp/Doubler.cpp)
+    src/dsp/Spread.cpp)
 
 target_include_directories(namstack_core PUBLIC src)
 target_link_libraries(namstack_core PUBLIC nam_core RTNeural)
@@ -129,7 +138,12 @@ if(NAMSTACK_BUILD_JUCE)
         COPY_PLUGIN_AFTER_BUILD FALSE
         PLUGIN_MANUFACTURER_CODE Plal
         PLUGIN_CODE NmSk
-        FORMATS LV2 VST3 Standalone
+        # AU is listed unconditionally: JUCE filters FORMATS through the
+        # platform's supported kinds (_juce_get_platform_plugin_kinds), so it
+        # is silently dropped everywhere but macOS. AUv3 is deliberately absent
+        # -- JUCE only offers it under the Xcode generator, and CI builds with
+        # the default one.
+        FORMATS LV2 VST3 AU Standalone
         PRODUCT_NAME "NamStack"
         LV2URI "urn:pilali:NamStack")
 

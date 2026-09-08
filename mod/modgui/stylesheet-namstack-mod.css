@@ -4,9 +4,11 @@
    Signal-flow reading order, top to bottom, every control cell on a 88px grid
    (left: 22 + k*88) so the columns line up from row to row:
      1. neural model (file selector) + A2 quality, input, params, output
-     2. all the EQ on one line: tone stack, then the 5-band graphic EQ
+     2. all the EQ on one line: tone stack, then the 5-band graphic EQ. This
+        row alone runs on a tighter 80/68px grid -- nine tone-stack cells plus
+        five faders do not fit the 88/72 one inside the 1064px inner width
      3. IR mixer, one 264px slot per IR: file selector above on / level / pan
-     4. doubler */
+     4. spread */
 
 .namstackmod{{{cns}}} {
     position: absolute;
@@ -71,15 +73,15 @@
 /* Each line is centred in the 1120px pedal; the lefts are precomputed from
    the row widths so the screenshot generator can mirror them exactly.
      row 1: 240 (model selector) + 5*88 = 680  -> (1120-680)/2  = 220
-     row 2: 8*88 + 5*72          = 1064        -> (1120-1064)/2 = 28
+     row 2: 9*80 + 5*68          = 1060        -> (1120-1060)/2 = 30
      row 3: 4 slots * 264        = 1056        -> (1120-1056)/2 = 32
-     row 4: 6*88                 = 528         -> (1120-528)/2  = 296
+     row 4: 7*88                 = 616         -> (1120-616)/2  = 252
    Row 1's knobs start after the selector (220 + 240); row 3's controls sit
    under the IR selectors (top 350). */
 .namstackmod{{{cns}}} .ns-row-model { top: 70px; left: 460px; }
-.namstackmod{{{cns}}} .ns-row-eq    { top: 190px; left: 28px; }
+.namstackmod{{{cns}}} .ns-row-eq    { top: 190px; left: 30px; }
 .namstackmod{{{cns}}} .ns-row-ir    { top: 392px; left: 32px; }
-.namstackmod{{{cns}}} .ns-row-dbl   { top: 512px; left: 296px; }
+.namstackmod{{{cns}}} .ns-row-spr   { top: 512px; left: 252px; }
 
 /* ------------------------------------------------------- section rules */
 /* A thin rule above each row, broken in the middle by the section's name.
@@ -97,7 +99,7 @@
 .namstackmod{{{cns}}} .ns-section-amp { top: 50px; }
 .namstackmod{{{cns}}} .ns-section-eq  { top: 170px; }
 .namstackmod{{{cns}}} .ns-section-cab { top: 330px; }
-.namstackmod{{{cns}}} .ns-section-dbl { top: 492px; }
+.namstackmod{{{cns}}} .ns-section-spr { top: 492px; }
 
 .namstackmod{{{cns}}} .ns-section:before,
 .namstackmod{{{cns}}} .ns-section:after {
@@ -135,6 +137,13 @@
     width: 72px;
     text-align: center;
 }
+
+/* The EQ line carries nine tone-stack cells (the level compensation switch
+   joined them) plus the five faders: 9*88 + 5*72 would be 1152, past the
+   1064px inner width. Only this row tightens, so every other row keeps the
+   88px grid the columns are aligned on. */
+.namstackmod{{{cns}}} .ns-row-eq .ns-ctrl       { width: 80px; }
+.namstackmod{{{cns}}} .ns-row-eq .ns-ctrl-fader { width: 68px; }
 
 .namstackmod{{{cns}}} .ns-ctrl p,
 .namstackmod{{{cns}}} .ns-ctrl-fader p {
